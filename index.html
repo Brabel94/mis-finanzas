@@ -780,6 +780,24 @@
         <label>Monto mensual (COP)</label>
         <input type="number" id="fijo-amount" placeholder="0" min="0">
       </div>
+
+      <!-- Toggle fijo/variable — solo gastos -->
+      <div class="field" id="fijo-tipo-field">
+        <label>Tipo de monto</label>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button id="fijo-tipo-fijo" onclick="setFijoTipo('fijo')"
+            style="flex:1;padding:10px;border-radius:var(--radius-sm);border:2px solid var(--green);background:var(--green-light);color:var(--green-dark);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+            📌 Valor fijo
+          </button>
+          <button id="fijo-tipo-variable" onclick="setFijoTipo('variable')"
+            style="flex:1;padding:10px;border-radius:var(--radius-sm);border:2px solid var(--border);background:var(--bg);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
+            📊 Valor variable
+          </button>
+        </div>
+        <div id="fijo-tipo-hint" style="font-size:11px;color:var(--text3);margin-top:6px">
+          El monto es siempre el mismo cada mes.
+        </div>
+      </div>
       <div class="field">
         <label id="fijo-day-label">Día de pago</label>
         <input type="number" id="fijo-day" placeholder="1" min="1" max="31">
@@ -1307,6 +1325,13 @@ function showTab(name) {
 // ============================================================
 let dashDonutChart = null;
 
+// Helper: get actual paid amount for a fijo (stored in paid object, fallback to f.amount)
+function paidAmount(f, paidObj) {
+  const v = paidObj[f.id];
+  if (!v) return 0;
+  return typeof v === 'number' ? v : f.amount;
+}
+
 function renderDashboard() {
   const expenses  = getExpenses();
   const income    = getIncome();
@@ -1332,7 +1357,7 @@ function renderDashboard() {
   });
 
   // Fijos — only PAID/RECEIVED ones affect the balance
-  const fijosGastosPagados   = fijos.filter(f =>  paid[f.id]).reduce((s,f) => s+f.amount, 0);
+  const fijosGastosPagados   = fijos.filter(f =>  paid[f.id]).reduce((s,f) => s + paidAmount(f, paid), 0);
   const fijosGastosPendientes= fijos.filter(f => !paid[f.id]).reduce((s,f) => s+f.amount, 0);
 
   const ingresosFijos    = getIngresosFijos();
@@ -1601,7 +1626,8 @@ function renderGastos() {
   const total    = expenses.reduce((s, e) => s + e.amount, 0);
 
   // Only PAID fijos affect the balance
-  const fijosGastosPagados      = getFijos().filter(f =>  getFijosPaid()[f.id]).reduce((s,f)=>s+f.amount,0);
+  const paidGObj = getFijosPaid();
+  const fijosGastosPagados      = getFijos().filter(f => paidGObj[f.id]).reduce((s,f) => s + paidAmount(f, paidGObj), 0);
   const ingresosFijosRecibidos  = getIngresosFijos().filter(f => getIngresosPaid()[f.id]).reduce((s,f)=>s+f.amount,0);
   const totalIncome = income + ingresosFijosRecibidos;
 
@@ -2938,8 +2964,39 @@ function saveIngresosPaid(obj)  { setStorage(`ingresos-paid-${monthKey()}`, obj)
 
 let currentFijoType = 'gasto'; // 'gasto' | 'ingreso'
 
+let currentFijoTipo = 'fijo'; // 'fijo' | 'variable'
+
+function setFijoTipo(tipo) {
+  currentFijoTipo = tipo;
+  const btnFijo = document.getElementById('fijo-tipo-fijo');
+  const btnVar  = document.getElementById('fijo-tipo-variable');
+  const hint    = document.getElementById('fijo-tipo-hint');
+  const amtLabel= document.querySelector('#fijoModal label[for="fijo-amount"], #fijoModal .field label');
+
+  if (tipo === 'fijo') {
+    btnFijo.style.borderColor  = 'var(--green)';
+    btnFijo.style.background   = 'var(--green-light)';
+    btnFijo.style.color        = 'var(--green-dark)';
+    btnVar.style.borderColor   = 'var(--border)';
+    btnVar.style.background    = 'var(--bg)';
+    btnVar.style.color         = 'var(--text2)';
+    hint.textContent           = 'El monto es siempre el mismo cada mes.';
+    document.getElementById('fijo-amount').placeholder = '0';
+  } else {
+    btnVar.style.borderColor   = 'var(--yellow)';
+    btnVar.style.background    = 'var(--yellow-light)';
+    btnVar.style.color         = '#7a5010';
+    btnFijo.style.borderColor  = 'var(--border)';
+    btnFijo.style.background   = 'var(--bg)';
+    btnFijo.style.color        = 'var(--text2)';
+    hint.textContent           = 'El monto cambia cada mes. Se te pedirá el valor real al marcarlo como pagado.';
+    document.getElementById('fijo-amount').placeholder = 'Monto estimado (referencia)';
+  }
+}
+
 function openFijoModal(type) {
   currentFijoType = type || 'gasto';
+  currentFijoTipo = 'fijo';
   const isGasto = currentFijoType === 'gasto';
 
   document.getElementById('fijoModalTitle').textContent = isGasto ? 'Nuevo gasto fijo' : 'Nuevo ingreso fijo';
@@ -2949,6 +3006,9 @@ function openFijoModal(type) {
   document.getElementById('fijoSaveBtn').style.background= isGasto ? 'var(--red)' : 'var(--green)';
   document.getElementById('fijoSaveBtn').textContent     = isGasto ? 'Guardar gasto fijo' : 'Guardar ingreso fijo';
   document.getElementById('fijo-cat-field').style.display= isGasto ? '' : 'none';
+  // Variable toggle only for gastos
+  document.getElementById('fijo-tipo-field').style.display = isGasto ? '' : 'none';
+  setFijoTipo('fijo'); // reset to fixed
 
   ['fijo-name','fijo-amount','fijo-day','fijo-note'].forEach(id => document.getElementById(id).value = '');
   selectedFijoCategory = CATEGORIES[0]?.id || 'otro';
@@ -2975,16 +3035,17 @@ function selectFijoCategory(id) {
 function saveFijo() {
   const name   = document.getElementById('fijo-name').value.trim();
   const amount = parseFloat(document.getElementById('fijo-amount').value) || 0;
-  if (!name)      { alert('Ingresa un nombre'); return; }
-  if (amount <= 0){ alert('Ingresa un monto mayor a 0'); return; }
+  if (!name)       { alert('Ingresa un nombre'); return; }
+  if (amount <= 0) { alert('Ingresa un monto mayor a 0'); return; }
 
   const item = {
-    id    : Date.now().toString(),
+    id      : Date.now().toString(),
     name, amount,
-    day   : parseInt(document.getElementById('fijo-day').value) || 1,
-    note  : document.getElementById('fijo-note').value.trim(),
+    day     : parseInt(document.getElementById('fijo-day').value) || 1,
+    note    : document.getElementById('fijo-note').value.trim(),
     category: currentFijoType === 'gasto' ? selectedFijoCategory : 'ingreso',
-    type  : currentFijoType,
+    type    : currentFijoType,
+    variable: currentFijoType === 'gasto' && currentFijoTipo === 'variable',
   };
 
   if (currentFijoType === 'gasto') {
@@ -3001,9 +3062,35 @@ function saveFijo() {
 
 function toggleFijoPaid(id, type) {
   if (type === 'ingreso') {
-    const paid = getIngresosPaid(); paid[id] = !paid[id]; saveIngresosPaid(paid);
+    const paid = getIngresosPaid();
+    paid[id] = paid[id] ? false : true;
+    saveIngresosPaid(paid);
   } else {
-    const paid = getFijosPaid(); paid[id] = !paid[id]; saveFijosPaid(paid);
+    const paid  = getFijosPaid();
+    const isNowPaid = !paid[id];
+
+    if (isNowPaid) {
+      // Check if this is a variable gasto
+      const fijo = getFijos().find(function(f){ return f.id === id; });
+      if (fijo && fijo.variable) {
+        // Ask for real amount this month
+        const input = prompt(
+          '📊 Gasto variable: ' + fijo.name + '\n\n' +
+          'Monto estimado: ' + fmtCOP(fijo.amount) + '\n' +
+          '¿Cuánto pagaste este mes? (COP)',
+          fijo.amount
+        );
+        if (input === null) return; // cancelled — don't mark as paid
+        const realAmt = parseFloat(String(input).replace(/[^0-9.]/g,''));
+        if (!realAmt || realAmt <= 0) { alert('Ingresa un monto válido'); return; }
+        paid[id] = realAmt; // store actual amount paid
+      } else {
+        paid[id] = fijo ? fijo.amount : true; // store amount for fixed
+      }
+    } else {
+      paid[id] = false; // unmark
+    }
+    saveFijosPaid(paid);
   }
   renderFijos();
   renderDashboard();
@@ -3034,8 +3121,8 @@ function renderFijos() {
 
   // KPIs
   const gastosTotal        = gastos.reduce((s,f) => s+f.amount, 0);
-  const gastosPagado       = gastos.filter(f=>paidG[f.id]).reduce((s,f)=>s+f.amount, 0);
-  const gastosPendiente    = gastosTotal - gastosPagado;
+  const gastosPagado       = gastos.filter(f=>paidG[f.id]).reduce((s,f) => s + paidAmount(f, paidG), 0);
+  const gastosPendiente    = gastos.filter(f=>!paidG[f.id]).reduce((s,f) => s + f.amount, 0);
   const ingresosTotal      = ingresos.reduce((s,f) => s+f.amount, 0);
   const ingresosPagado     = ingresos.filter(f=>paidI[f.id]).reduce((s,f)=>s+f.amount, 0);
   const ingresosPendiente  = ingresosTotal - ingresosPagado;
@@ -3083,7 +3170,7 @@ function renderFijos() {
         const cat     = CATEGORIES.find(c => c.id === f.category) || { icon: '📌' };
         const color   = CAT_COLORS[f.category] || '#e05c5c';
         const overdue = isCurrentMonth && f.day < today.getDate() && !isPaid;
-        return fijoItemHTML(f, isPaid, cat, color, overdue, 'gasto');
+        return fijoItemHTML(f, isPaid, cat, color, overdue, 'gasto', paidG);
       }).join('');
     }
   }
@@ -3097,7 +3184,7 @@ function renderFijos() {
       ingresosList.innerHTML = [...ingresos].sort((a,b) => a.day - b.day).map(f => {
         const isPaid  = !!paidI[f.id];
         const overdue = isCurrentMonth && f.day < today.getDate() && !isPaid;
-        return fijoItemHTML(f, isPaid, { icon: '💰' }, '#4caf82', overdue, 'ingreso');
+        return fijoItemHTML(f, isPaid, { icon: '💰' }, '#4caf82', overdue, 'ingreso', paidI);
       }).join('');
     }
   }
@@ -3110,19 +3197,29 @@ function openFijosModal() {
 
 function toggleFijosPanel() { openFijosModal(); } // legacy alias
 
-function fijoItemHTML(f, isPaid, cat, color, overdue, type) {
+function fijoItemHTML(f, isPaid, cat, color, overdue, type, paidObj) {
   const isIngreso   = type === 'ingreso';
+  const isVariable  = !isIngreso && f.variable;
+  const actualAmt   = (isPaid && paidObj) ? paidAmount(f, paidObj) : f.amount;
+
   const btnStyle    = isPaid
     ? 'background:var(--green);border-color:var(--green)'
     : 'border-color:' + color + '44';
   const btnTitle    = isPaid
     ? 'Marcar como pendiente'
-    : (isIngreso ? 'Marcar como recibido' : 'Marcar como pagado');
+    : (isIngreso ? 'Marcar como recibido' : (isVariable ? 'Marcar como pagado (pregunta el monto)' : 'Marcar como pagado'));
   const amtColor    = (isIngreso && !isPaid) ? 'color:var(--green-dark)' : '';
   const amtPrefix   = isIngreso ? '+ ' : '';
   const overdueSpan = overdue
     ? '<span style="background:var(--red-light);color:var(--red);font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;margin-left:4px">Vencido</span>'
     : '';
+  const varBadge    = isVariable
+    ? '<span style="font-size:10px;background:var(--yellow-light);color:#7a5010;padding:1px 7px;border-radius:10px;margin-left:4px">📊 Variable</span>'
+    : '';
+  // Show actual paid amount vs estimate
+  const amtDisplay  = isPaid && isVariable && actualAmt !== f.amount
+    ? fmtCOP(actualAmt) + ' <span style="font-size:10px;color:var(--text3);text-decoration:line-through">' + fmtCOP(f.amount) + '</span>'
+    : amtPrefix + fmtCOP(actualAmt);
 
   return '<div class="fijo-item ' + (isPaid ? 'paid' : '') + '">' +
     '<button class="fijo-check ' + (isPaid ? 'checked' : '') + '" style="' + btnStyle + '"' +
@@ -3131,11 +3228,11 @@ function fijoItemHTML(f, isPaid, cat, color, overdue, type) {
     '</button>' +
     '<div class="fijo-icon" style="background:' + color + '22">' + cat.icon + '</div>' +
     '<div class="fijo-info">' +
-      '<div class="fijo-name ' + (isPaid ? 'paid-text' : '') + '">' + f.name + '</div>' +
+      '<div class="fijo-name ' + (isPaid ? 'paid-text' : '') + '">' + f.name + varBadge + '</div>' +
       '<div class="fijo-meta">Día ' + f.day + (f.note ? ' · ' + f.note : '') + overdueSpan + '</div>' +
     '</div>' +
     '<div class="fijo-right">' +
-      '<div class="fijo-amt ' + (isPaid ? 'paid-text' : '') + '" style="' + amtColor + '">' + amtPrefix + fmtCOP(f.amount) + '</div>' +
+      '<div class="fijo-amt ' + (isPaid ? 'paid-text' : '') + '" style="' + amtColor + '">' + amtDisplay + '</div>' +
       '<button class="fijo-del" onclick="deleteFijo(\'' + f.id + '\',\'' + type + '\')" title="Eliminar">✕</button>' +
     '</div>' +
   '</div>';
