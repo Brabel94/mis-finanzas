@@ -3381,6 +3381,7 @@ function showApp(user) {
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
   });
+  _patchModalOpen(); // enable back-gesture to close modals on Android
   renderDashboard();
 }
 
@@ -3541,7 +3542,43 @@ function clearAllData() {
 // ============================================================
 function closeModal(id) {
   document.getElementById(id).classList.remove('show');
+  // Consume the history entry we pushed when opening
+  if (history.state && history.state.modal === id) {
+    history.back();
+  }
 }
+
+// Push a history entry when any modal opens so back gesture closes it
+function _patchModalOpen() {
+  document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+    // Watch for 'show' class being added
+    const id = overlay.id;
+    if (!id) return;
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        if (m.attributeName === 'class') {
+          const isOpen = overlay.classList.contains('show');
+          if (isOpen && (!history.state || history.state.modal !== id)) {
+            history.pushState({ modal: id }, '', '');
+          }
+        }
+      });
+    });
+    observer.observe(overlay, { attributes: true });
+  });
+}
+
+// Handle back gesture / browser back button
+window.addEventListener('popstate', function(e) {
+  // Find any open modal and close it
+  const openModal = document.querySelector('.modal-overlay.show');
+  if (openModal) {
+    openModal.classList.remove('show');
+    // Don't navigate back — push a neutral state so next back works correctly
+    history.pushState(null, '', '');
+  }
+});
+
 
 // Simple numpad inline
 document.addEventListener('DOMContentLoaded', () => {
