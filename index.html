@@ -431,6 +431,22 @@
 </head>
 <body>
 
+<!-- ===== PANTALLA DE CARGA (mientras Firebase verifica sesión) ===== -->
+<div id="loadingScreen" style="position:fixed;inset:0;background:var(--green);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.3s ease">
+  <div style="text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">💰</div>
+    <div style="font-size:24px;font-weight:700;color:white;letter-spacing:-0.5px">Mis<span style="font-weight:300">Finanzas</span></div>
+    <div style="margin-top:20px;display:flex;gap:6px;justify-content:center">
+      <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);animation:dot 1.2s infinite 0s"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);animation:dot 1.2s infinite 0.2s"></div>
+      <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);animation:dot 1.2s infinite 0.4s"></div>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes dot { 0%,80%,100%{opacity:0.3;transform:scale(1)} 40%{opacity:1;transform:scale(1.3)} }
+</style>
+
 <!-- ===== PANTALLA DE LOGIN ===== -->
 <div id="loginScreen" style="display:none;position:fixed;inset:0;background:var(--green);z-index:1000;flex-direction:column;align-items:center;justify-content:center;padding:24px">
   <div style="width:100%;max-width:380px">
@@ -3265,7 +3281,7 @@ const FS_USER = 'user1'; // single-user key — change if you add auth later
 async function initFirebase() {
   const cfg = getStorage('firebase-config');
   if (!cfg || !cfg.apiKey) {
-    // No config — show app in local mode
+    // No config — show app in local mode directly
     showApp(null);
     return;
   }
@@ -3295,7 +3311,8 @@ async function initFirebase() {
         await initFirestoreSync(cfg, app, user);
         showApp(user);
       } else {
-        // Not logged in — show login screen
+        // Not logged in — hide loading, show login
+        hideLoadingScreen();
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('appMain').style.display = 'none';
       }
@@ -3303,8 +3320,16 @@ async function initFirebase() {
 
   } catch(e) {
     console.warn('Firebase init error:', e);
+    hideLoadingScreen();
     showApp(null); // fallback to local mode
   }
+}
+
+function hideLoadingScreen() {
+  const el = document.getElementById('loadingScreen');
+  if (!el) return;
+  el.style.opacity = '0';
+  setTimeout(function(){ el.style.display = 'none'; }, 300);
 }
 
 async function initFirestoreSync(cfg, app, user) {
@@ -3339,6 +3364,7 @@ async function initFirestoreSync(cfg, app, user) {
 }
 
 function showApp(user) {
+  hideLoadingScreen();
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appMain').style.display     = 'block';
   if (user) {
