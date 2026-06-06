@@ -814,6 +814,7 @@
       <div class="field"><label>Project ID</label><input type="text" id="fb-projectId" placeholder="miproyecto-xxxxx"></div>
       <div class="field"><label>App ID</label><input type="text" id="fb-appId" placeholder="1:123456789:web:abc..."></div>
       <button class="btn btn-green" onclick="saveFirebaseConfig()">Guardar y conectar</button>
+      <button class="btn btn-outline" onclick="fsPushAll()" style="margin-top:6px">☁️ Sincronizar datos ahora</button>
       <div id="fb-status" style="text-align:center;font-size:13px;margin-top:10px;color:var(--text2)"></div>
     </div>
     <div class="card-item" style="margin-top:12px">
@@ -1086,7 +1087,7 @@ let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 // Entry modal state lives entirely in the EM namespace object below
 let donutChart   = null;
-let firebaseDB   = null;
+let fsDB = null; // initialized by initFirebase()
 
 function monthKey() { return `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`; }
 
@@ -1963,7 +1964,6 @@ const EM = {
       const expenses = getExpenses();
       expenses.push(expense);
       saveExpenses(expenses);
-      if (firebaseDB) syncExpenseToFirebase(expense);
     }
 
     this.close();
@@ -3060,40 +3060,112 @@ function fijoItemHTML(f, isPaid, cat, color, overdue, type) {
 
 function saveFirebaseConfig() {
   const cfg = {
-    apiKey: document.getElementById('fb-apiKey').value.trim(),
-    authDomain: document.getElementById('fb-authDomain').value.trim(),
-    projectId: document.getElementById('fb-projectId').value.trim(),
-    appId: document.getElementById('fb-appId').value.trim(),
+    apiKey      : document.getElementById('fb-apiKey').value.trim(),
+    authDomain  : document.getElementById('fb-authDomain').value.trim(),
+    projectId   : document.getElementById('fb-projectId').value.trim(),
+    appId       : document.getElementById('fb-appId').value.trim(),
   };
-  if (!cfg.apiKey || !cfg.projectId) { document.getElementById('fb-status').textContent = '❌ Completa al menos API Key y Project ID'; return; }
+  if (!cfg.apiKey || !cfg.projectId) {
+    document.getElementById('fb-status').textContent = '❌ Completa al menos API Key y Project ID';
+    return;
+  }
   setStorage('firebase-config', cfg);
-  document.getElementById('fb-status').textContent = '✅ Configuración guardada. Recarga la página para conectar.';
-  document.getElementById('firebaseBar').innerHTML = '✅ Firebase configurado. Recarga la página para activar sincronización.';
+  document.getElementById('fb-status').textContent = '✅ Guardado. Recarga la página para activar.';
 }
+
+// ── Firestore helpers ─────────────────────────────────────
+// fsDB is declared above near other state variables
+let fsSet, fsGet, fsDoc, fsCollection, fsSetDoc, fsGetDoc, fsOnSnapshot, fsBatch;
+const FS_USER = 'user1'; // single-user key — change if you add auth later
 
 async function initFirebase() {
   const cfg = getStorage('firebase-config');
   if (!cfg || !cfg.apiKey) return;
   try {
-    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const { getDatabase, ref, set, get, child } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-    const app = initializeApp(cfg);
-    firebaseDB = getDatabase(app);
-    document.getElementById('firebaseBar').innerHTML = '🔥 Firebase conectado — tus datos se sincronizan automáticamente.';
-    document.getElementById('firebaseBar').style.background = 'var(--green-light)';
-    document.getElementById('firebaseBar').style.borderColor = 'var(--green)';
-    document.getElementById('firebaseBar').style.color = 'var(--green-dark)';
+    const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const fs = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+    const app = getApps().length ? getApps()[0] : initializeApp(cfg);
+    fsDB = fs.getFirestore(app);
+    fsSetDoc   = fs.setDoc;
+    fsGetDoc   = fs.getDoc;
+    fsDoc      = fs.doc;
+    fsOnSnapshot = fs.onSnapshot;
+    fsBatch    = () => fs.writeBatch(fsDB);
+
+    // Override setStorage to also write to Firestore
+    const _origSet = window._origSetStorage || setStorage;
+    window._origSetStorage = _origSet;
+    window.setStorage = function(key, val) {
+      _origSet(key, val); // always save locally first
+      fsWriteKey(key, val); // then sync to Firestore
+    };
+
+    // Pull all data from Firestore on load
+    await fsPullAll();
+
+    const bar = document.getElementById('firebaseBar');
+    bar.innerHTML = '🔥 Firebase activo — datos sincronizados entre dispositivos.';
+    bar.style.background   = 'var(--green-light)';
+    bar.style.borderColor  = 'var(--green)';
+    bar.style.color        = 'var(--green-dark)';
+
+    // Re-render after loading cloud data
+    renderDashboard();
+
   } catch(e) {
     console.warn('Firebase init error:', e);
+    document.getElementById('firebaseBar').innerHTML = '⚠️ Error conectando Firebase: ' + e.message;
   }
 }
 
-function syncExpenseToFirebase(expense) {
-  if (!firebaseDB) return;
-  import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js').then(({ ref, set }) => {
-    set(ref(firebaseDB, `expenses/${monthKey()}/${expense.id}`), expense).catch(console.warn);
-  });
+// Write a single key to Firestore
+function fsWriteKey(key, val) {
+  if (!fsDB || !fsSetDoc || !fsDoc) return;
+  const safeKey = key.replace(/\//g, '__').replace(/\./g, '_');
+  fsSetDoc(fsDoc(fsDB, 'users', FS_USER, 'data', safeKey), { val: JSON.stringify(val) })
+    .catch(e => console.warn('Firestore write error:', e));
 }
+
+// Pull ALL keys from Firestore and merge into localStorage
+async function fsPullAll() {
+  if (!fsDB) return;
+  try {
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const snap = await getDocs(collection(fsDB, 'users', FS_USER, 'data'));
+    snap.forEach(docSnap => {
+      const key      = docSnap.id.replace(/__/g, '/').replace(/_/g, '.');
+      const rawKey   = docSnap.id; // safe key
+      const data     = docSnap.data();
+      if (data && data.val !== undefined) {
+        try {
+          // Only overwrite if cloud data is newer/exists
+          const parsed = JSON.parse(data.val);
+          localStorage.setItem(key, JSON.stringify(parsed));
+        } catch {}
+      }
+    });
+  } catch(e) {
+    console.warn('Firestore pull error:', e);
+  }
+}
+
+// Push ALL localStorage keys to Firestore (one-time migration)
+function fsPushAll() {
+  if (!fsDB) { alert('Firebase no está conectado'); return; }
+  let count = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key === 'firebase-config') continue; // never sync credentials
+    try {
+      const val = JSON.parse(localStorage.getItem(key));
+      fsWriteKey(key, val);
+      count++;
+    } catch {}
+  }
+  alert('✅ ' + count + ' claves sincronizadas a Firebase.');
+}
+
 
 // ============================================================
 // EXPORT
