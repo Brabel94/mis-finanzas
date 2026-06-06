@@ -431,6 +431,75 @@
 </head>
 <body>
 
+<!-- ===== PANTALLA DE LOGIN ===== -->
+<div id="loginScreen" style="display:none;position:fixed;inset:0;background:var(--green);z-index:1000;flex-direction:column;align-items:center;justify-content:center;padding:24px">
+  <div style="width:100%;max-width:380px">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:40px">
+      <div style="font-size:48px;margin-bottom:8px">💰</div>
+      <div style="font-size:28px;font-weight:700;color:white;letter-spacing:-0.5px">Mis<span style="font-weight:300">Finanzas</span></div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:6px">Tu dinero, bajo control</div>
+    </div>
+
+    <!-- Card de login -->
+    <div style="background:white;border-radius:20px;padding:28px 24px;box-shadow:0 8px 40px rgba(0,0,0,0.15)">
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px">Iniciar sesión</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:22px">Tus datos se sincronizan en todos tus dispositivos</div>
+
+      <!-- Google -->
+      <button onclick="loginWithGoogle()"
+        style="width:100%;padding:13px;border:1.5px solid var(--border);border-radius:12px;background:white;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;transition:all 0.15s"
+        onmouseover="this.style.background='#f8f8f8'" onmouseout="this.style.background='white'">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:20px;height:20px">
+        Continuar con Google
+      </button>
+
+      <!-- Divider -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:12px;color:var(--text3)">o con email</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
+      <!-- Email / Password -->
+      <div style="margin-bottom:12px">
+        <input type="email" id="login-email" placeholder="Correo electrónico"
+          style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;outline:none"
+          onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div style="margin-bottom:18px;position:relative">
+        <input type="password" id="login-pass" placeholder="Contraseña"
+          style="width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;outline:none"
+          onfocus="this.style.borderColor='var(--green)'" onblur="this.style.borderColor='var(--border)'"
+          onkeydown="if(event.key==='Enter')loginWithEmail()">
+      </div>
+
+      <div id="login-error" style="font-size:12px;color:var(--red);margin-bottom:12px;min-height:16px;text-align:center"></div>
+
+      <button onclick="loginWithEmail()"
+        style="width:100%;padding:13px;background:var(--green);border:none;border-radius:12px;font-size:14px;font-weight:700;color:white;cursor:pointer;font-family:inherit;margin-bottom:10px">
+        Entrar
+      </button>
+
+      <button onclick="registerWithEmail()"
+        style="width:100%;padding:11px;background:transparent;border:1.5px solid var(--green);border-radius:12px;font-size:13px;font-weight:600;color:var(--green-dark);cursor:pointer;font-family:inherit">
+        Crear cuenta nueva
+      </button>
+
+      <div id="login-loading" style="display:none;text-align:center;padding:10px;font-size:13px;color:var(--text2)">
+        ⏳ Conectando...
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:rgba(255,255,255,0.6)">
+      Tus datos están cifrados y son privados
+    </div>
+  </div>
+</div>
+
+<!-- ===== APP PRINCIPAL (oculta hasta login) ===== -->
+<div id="appMain" style="display:none">
+
 <!-- TOP BAR -->
 <div class="topbar">
   <div class="topbar-logo">Mis<span>Finanzas</span></div>
@@ -795,6 +864,18 @@
   <!-- ===== CONFIG TAB ===== -->
   <div id="tab-config" style="display:none">
 
+    <!-- Usuario activo -->
+    <div style="background:var(--card);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text)" id="user-email-display">No conectado</div>
+          <div style="font-size:11px;color:var(--green-dark)">🔥 Firebase activo</div>
+        </div>
+      </div>
+      <button onclick="logoutUser()" style="background:var(--red-light);color:var(--red);border:1px solid var(--red);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Cerrar sesión</button>
+    </div>
+
     <!-- 🏷️ CATEGORÍAS (moved here from tab) -->
     <div class="card-item" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1035,6 +1116,8 @@
     <button class="btn btn-outline" onclick="closeModal('catModal')">Cancelar</button>
   </div>
 </div>
+
+</div><!-- /appMain -->
 
 <script>
 // ============================================================
@@ -3080,68 +3163,195 @@ const FS_USER = 'user1'; // single-user key — change if you add auth later
 
 async function initFirebase() {
   const cfg = getStorage('firebase-config');
-  if (!cfg || !cfg.apiKey) return;
+  if (!cfg || !cfg.apiKey) {
+    // No config — show app in local mode
+    showApp(null);
+    return;
+  }
   try {
     const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-    const fs = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    const { getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+            createUserWithEmailAndPassword, signOut,
+            GoogleAuthProvider, signInWithPopup } =
+      await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
 
-    const app = getApps().length ? getApps()[0] : initializeApp(cfg);
-    fsDB = fs.getFirestore(app);
-    fsSetDoc   = fs.setDoc;
-    fsGetDoc   = fs.getDoc;
-    fsDoc      = fs.doc;
-    fsOnSnapshot = fs.onSnapshot;
-    fsBatch    = () => fs.writeBatch(fsDB);
+    const app  = getApps().length ? getApps()[0] : initializeApp(cfg);
+    const auth = getAuth(app);
 
-    // Override setStorage to also write to Firestore
-    const _origSet = window._origSetStorage || setStorage;
-    window._origSetStorage = _origSet;
-    window.setStorage = function(key, val) {
-      _origSet(key, val); // always save locally first
-      fsWriteKey(key, val); // then sync to Firestore
-    };
+    // Store auth globally
+    window._fbAuth   = auth;
+    window._signOut  = signOut;
+    window._signInEmail = (e,p) => signInWithEmailAndPassword(auth, e, p);
+    window._registerEmail = (e,p) => createUserWithEmailAndPassword(auth, e, p);
+    window._signInGoogle  = () => signInWithPopup(auth, new GoogleAuthProvider());
 
-    // Pull all data from Firestore on load
-    await fsPullAll();
+    // Show login screen while waiting for auth state
+    document.getElementById('loginScreen').style.display = 'flex';
 
-    const bar = document.getElementById('firebaseBar');
-    bar.innerHTML = '🔥 Firebase activo — datos sincronizados entre dispositivos.';
-    bar.style.background   = 'var(--green-light)';
-    bar.style.borderColor  = 'var(--green)';
-    bar.style.color        = 'var(--green-dark)';
-
-    // Re-render after loading cloud data
-    renderDashboard();
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Authenticated — init Firestore and show app
+        await initFirestoreSync(cfg, app, user);
+        showApp(user);
+      } else {
+        // Not logged in — show login screen
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('appMain').style.display = 'none';
+      }
+    });
 
   } catch(e) {
     console.warn('Firebase init error:', e);
-    document.getElementById('firebaseBar').innerHTML = '⚠️ Error conectando Firebase: ' + e.message;
+    showApp(null); // fallback to local mode
   }
 }
 
-// Write a single key to Firestore
-function fsWriteKey(key, val) {
-  if (!fsDB || !fsSetDoc || !fsDoc) return;
-  const safeKey = key.replace(/\//g, '__').replace(/\./g, '_');
-  fsSetDoc(fsDoc(fsDB, 'users', FS_USER, 'data', safeKey), { val: JSON.stringify(val) })
-    .catch(e => console.warn('Firestore write error:', e));
+async function initFirestoreSync(cfg, app, user) {
+  try {
+    const { getFirestore, doc, setDoc, collection, getDocs } =
+      await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+
+    fsDB = getFirestore(app);
+    window._fsDoc    = doc;
+    window._fsSetDoc = setDoc;
+    window._fsColl   = collection;
+    window._fsGetDocs= getDocs;
+    window._fsUserId = user.uid;
+
+    // Override setStorage to sync to Firestore
+    if (!window._origSetStorage) {
+      window._origSetStorage = setStorage;
+      window.setStorage = function(key, val) {
+        window._origSetStorage(key, val);
+        fsWriteKey(key, val);
+      };
+    }
+
+    // Pull all cloud data into localStorage
+    await fsPullAll();
+
+    const bar = document.getElementById('firebaseBar');
+    bar.innerHTML = '🔥 Sincronizando datos en la nube.';
+    bar.style.background  = 'var(--green-light)';
+    bar.style.borderColor = 'var(--green)';
+    bar.style.color       = 'var(--green-dark)';
+
+  } catch(e) {
+    console.warn('Firestore sync error:', e);
+  }
 }
 
-// Pull ALL keys from Firestore and merge into localStorage
-async function fsPullAll() {
-  if (!fsDB) return;
+function showApp(user) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appMain').style.display     = 'block';
+  if (user) {
+    const emailEl = document.getElementById('user-email-display');
+    if (emailEl) emailEl.textContent = user.displayName || user.email || 'Usuario';
+  }
+  // Init the app
+  updateMonthLabel();
+  reloadCategories();
+  rebuildCatColors();
+  ['gastos','tarjetas','config'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = 'none';
+  });
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
+  });
+  renderDashboard();
+}
+
+async function loginWithGoogle() {
+  if (!window._signInGoogle) { alert('Firebase no configurado'); return; }
+  setLoginLoading(true);
   try {
-    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-    const snap = await getDocs(collection(fsDB, 'users', FS_USER, 'data'));
+    await window._signInGoogle();
+    // onAuthStateChanged handles the rest
+  } catch(e) {
+    showLoginError(e.code === 'auth/popup-closed-by-user' ? 'Ventana cerrada. Intenta de nuevo.' : 'Error: ' + e.message);
+    setLoginLoading(false);
+  }
+}
+
+async function loginWithEmail() {
+  if (!window._signInEmail) { alert('Firebase no configurado'); return; }
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showLoginError('Ingresa email y contraseña'); return; }
+  setLoginLoading(true);
+  try {
+    await window._signInEmail(email, pass);
+  } catch(e) {
+    const msg = e.code === 'auth/invalid-credential' ? 'Email o contraseña incorrectos'
+              : e.code === 'auth/user-not-found'     ? 'Usuario no encontrado'
+              : e.code === 'auth/wrong-password'     ? 'Contraseña incorrecta'
+              : 'Error: ' + e.message;
+    showLoginError(msg);
+    setLoginLoading(false);
+  }
+}
+
+async function registerWithEmail() {
+  if (!window._registerEmail) { alert('Firebase no configurado'); return; }
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showLoginError('Ingresa email y contraseña'); return; }
+  if (pass.length < 6) { showLoginError('La contraseña debe tener mínimo 6 caracteres'); return; }
+  setLoginLoading(true);
+  try {
+    await window._registerEmail(email, pass);
+  } catch(e) {
+    const msg = e.code === 'auth/email-already-in-use' ? 'Ese email ya tiene cuenta. Usa "Entrar".'
+              : e.code === 'auth/weak-password'        ? 'Contraseña muy débil'
+              : e.code === 'auth/invalid-email'        ? 'Email inválido'
+              : 'Error: ' + e.message;
+    showLoginError(msg);
+    setLoginLoading(false);
+  }
+}
+
+async function logoutUser() {
+  if (!window._signOut || !window._fbAuth) return;
+  if (!confirm('¿Cerrar sesión?')) return;
+  await window._signOut(window._fbAuth);
+  // Remove Firestore override so local mode works
+  if (window._origSetStorage) {
+    window.setStorage = window._origSetStorage;
+    window._origSetStorage = null;
+  }
+  fsDB = null;
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  if (el) el.textContent = msg;
+}
+function setLoginLoading(on) {
+  const el = document.getElementById('login-loading');
+  if (el) el.style.display = on ? 'block' : 'none';
+}
+
+function fsWriteKey(key, val) {
+  if (!fsDB || !window._fsSetDoc || !window._fsDoc) return;
+  if (key === 'firebase-config') return; // never sync credentials
+  const safeKey = key.replace(/\//g, '__').replace(/\./g, '-');
+  window._fsSetDoc(
+    window._fsDoc(fsDB, 'users', window._fsUserId || FS_USER, 'data', safeKey),
+    { val: JSON.stringify(val), key: key, ts: Date.now() }
+  ).catch(e => console.warn('Firestore write:', e));
+}
+
+async function fsPullAll() {
+  if (!fsDB || !window._fsColl || !window._fsGetDocs) return;
+  try {
+    const snap = await window._fsGetDocs(
+      window._fsColl(fsDB, 'users', window._fsUserId || FS_USER, 'data')
+    );
     snap.forEach(docSnap => {
-      const key      = docSnap.id.replace(/__/g, '/').replace(/_/g, '.');
-      const rawKey   = docSnap.id; // safe key
-      const data     = docSnap.data();
-      if (data && data.val !== undefined) {
+      const data = docSnap.data();
+      if (data && data.val !== undefined && data.key) {
         try {
-          // Only overwrite if cloud data is newer/exists
-          const parsed = JSON.parse(data.val);
-          localStorage.setItem(key, JSON.stringify(parsed));
+          localStorage.setItem(data.key, data.val);
         } catch {}
       }
     });
@@ -3150,13 +3360,12 @@ async function fsPullAll() {
   }
 }
 
-// Push ALL localStorage keys to Firestore (one-time migration)
 function fsPushAll() {
-  if (!fsDB) { alert('Firebase no está conectado'); return; }
+  if (!fsDB) { alert('Firebase no está conectado. Inicia sesión primero.'); return; }
   let count = 0;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key === 'firebase-config') continue; // never sync credentials
+    if (key === 'firebase-config') continue;
     try {
       const val = JSON.parse(localStorage.getItem(key));
       fsWriteKey(key, val);
@@ -3216,19 +3425,7 @@ function closeModal(id) {
 
 // Simple numpad inline
 document.addEventListener('DOMContentLoaded', () => {
-  // Attach click-outside-to-close to ALL modals (must run after full DOM is ready)
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
-  });
-
-  updateMonthLabel();
-  reloadCategories();
-  rebuildCatColors();
-  ['gastos','tarjetas','config'].forEach(t => {
-    document.getElementById(`tab-${t}`).style.display = 'none';
-  });
-  renderDashboard();
-  initFirebase();
+  initFirebase(); // handles login screen + app init via onAuthStateChanged
 });
 </script>
 <!-- ===== MODAL: IMPORTAR EXTRACTO ===== -->
