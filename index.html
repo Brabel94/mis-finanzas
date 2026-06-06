@@ -1179,6 +1179,10 @@ function getStorage(key) {
 }
 function setStorage(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  // If Firestore sync is active, write to cloud
+  if (window._origSetStorage && key !== 'firebase-config' && typeof fsWriteKey === 'function') {
+    fsWriteKey(key, val);
+  }
 }
 
 function getExpenses() { return getStorage(`expenses-${monthKey()}`) || []; }
@@ -3218,13 +3222,9 @@ async function initFirestoreSync(cfg, app, user) {
     window._fsGetDocs= getDocs;
     window._fsUserId = user.uid;
 
-    // Override setStorage to sync to Firestore
+    // Mark Firestore as active so setStorage auto-syncs
     if (!window._origSetStorage) {
-      window._origSetStorage = setStorage;
-      window.setStorage = function(key, val) {
-        window._origSetStorage(key, val);
-        fsWriteKey(key, val);
-      };
+      window._origSetStorage = true; // flag used by setStorage to trigger fsWriteKey
     }
 
     // Pull all cloud data into localStorage
@@ -3314,11 +3314,8 @@ async function logoutUser() {
   if (!window._signOut || !window._fbAuth) return;
   if (!confirm('¿Cerrar sesión?')) return;
   await window._signOut(window._fbAuth);
-  // Remove Firestore override so local mode works
-  if (window._origSetStorage) {
-    window.setStorage = window._origSetStorage;
-    window._origSetStorage = null;
-  }
+  // Disable Firestore sync
+  window._origSetStorage = null;
   fsDB = null;
 }
 
