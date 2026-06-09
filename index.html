@@ -1817,6 +1817,11 @@ const EM = {
     document.getElementById('entryNote').value = '';
     document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
 
+    this.setType(isIncome ? 'income' : 'expense');
+    this.buildCatGrid();
+    this.buildNumpad();
+
+    modalEl.classList.add('show');
   },
 
   setType(type) {
