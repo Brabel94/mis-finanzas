@@ -3776,8 +3776,8 @@ function renderTCRegistro() {
   // KPIs
   const kpisEl = document.getElementById('tcr-kpis');
   if (kpisEl && items.length) {
-    const totalVal  = items.reduce((s,i) => s + (i.valor||0), 0);
-    const totalCuota= items.reduce((s,i) => s + Math.ceil((i.valor||0) / Math.max(1, i.cuotas||1)), 0);
+    const totalVal   = items.reduce((s,i) => s + (i.valor||0), 0);
+    const totalCuota = items.reduce((s,i) => s + Math.ceil((i.valor||0) / Math.max(1, i.cuotas||1)), 0);
     kpisEl.innerHTML =
       '<div style="background:var(--blue-light);border-radius:var(--radius-sm);padding:8px 14px">' +
         '<div style="font-size:10px;color:var(--text2)">Total compras</div>' +
@@ -3805,11 +3805,13 @@ function renderTCRegistro() {
 
   // Sort
   const sf = tcrSortField, asc = tcrSortAsc;
-  filtered.sort(function(a,b) {
-    let va = a[sf] || '', vb = b[sf] || '';
-    if (sf === 'valor') { va = a.valor||0; vb = b.valor||0; return asc ? va-vb : vb-va; }
-    return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
-  });
+  if (sf !== '_none') { // _none = preserve insertion order (used by tcrAddRow)
+    filtered.sort(function(a,b) {
+      let va = a[sf] || '', vb = b[sf] || '';
+      if (sf === 'valor') { va = a.valor||0; vb = b.valor||0; return asc ? va-vb : vb-va; }
+      return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+  }
 
   // Update sort arrows
   ['fecha','nombre','tarjeta','valor'].forEach(function(f) {
@@ -3886,7 +3888,7 @@ function renderTCRegistro() {
   // Footer totals
   const totalVal   = filtered.reduce((s,i) => s + (i.valor||0), 0);
   const totalCuota = filtered.reduce((s,i) => s + Math.ceil((i.valor||0)/Math.max(1,i.cuotas||1)), 0);
-  document.getElementById('tcr-count').textContent     = filtered.length;
+  document.getElementById('tcr-count').textContent      = filtered.length;
   document.getElementById('tcr-total-val').textContent  = fmtCOP(totalVal);
   document.getElementById('tcr-total-cuota').textContent= fmtCOP(totalCuota);
   if (tfoot) tfoot.style.display = '';
@@ -3919,30 +3921,34 @@ function tcrUpdateCell(id, field, value) {
 // Add a blank row at the end
 function tcrAddRow() {
   const items = getTCRegistro();
+  const newId = Date.now().toString();
   items.push({
-    id      : Date.now().toString(),
-    nombre  : '',
-    valor   : 0,
-    tarjeta : '',
-    cuotas  : 1,
-    fecha   : new Date().toISOString().slice(0, 10),
-    nota    : '',
+    id       : newId,
+    nombre   : '',
+    valor    : 0,
+    tarjeta  : '',
+    cuotas   : 1,
+    fecha    : new Date().toISOString().slice(0, 10),
+    nota     : '',
     historial: []
   });
   saveTCRegistro(items);
+  // Render with insertion order (no sort) so new row always appears at the bottom
+  const prevSort = tcrSortField, prevAsc = tcrSortAsc;
+  tcrSortField = '_none'; tcrSortAsc = true; // _none = unknown field → stable array order
   renderTCRegistro();
-  // Scroll to bottom and focus first cell of new row
-  const tbody = document.getElementById('tcr-tbody');
-  if (tbody) {
-    setTimeout(function() {
-      const lastRow = tbody.querySelector('tr:last-child');
-      if (lastRow) {
-        lastRow.scrollIntoView({ behavior:'smooth', block:'nearest' });
-        const firstInput = lastRow.querySelector('input');
-        if (firstInput) firstInput.focus();
-      }
-    }, 80);
-  }
+  tcrSortField = prevSort; tcrSortAsc = prevAsc;
+  // Scroll to the new row and focus its first input
+  setTimeout(function() {
+    const tbody = document.getElementById('tcr-tbody');
+    if (!tbody) return;
+    const newRow = tbody.querySelector('tr[data-id="' + newId + '"]');
+    if (newRow) {
+      newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const firstInput = newRow.querySelector('input[type="date"]');
+      if (firstInput) { firstInput.focus(); firstInput.click(); }
+    }
+  }, 100);
 }
 
 function deleteTCRegistro(id) {
