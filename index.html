@@ -855,13 +855,8 @@
 
 </div>
 
-<!-- FAB GROUP: + ingreso (verde) y - gasto (rojo) -->
-<div class="fab-group">
-  <div class="fab-tip">Ingreso</div>
-  <button class="fab-income" onclick="openEntryModal(true)" title="Agregar ingreso">+</button>
-  <button class="fab-expense" onclick="openEntryModal(false)" title="Agregar gasto">−</button>
-  <div class="fab-tip">Gasto</div>
-</div>
+
+
 
 <!-- ===== MODAL UNIFICADO: INGRESO / GASTO ===== -->
 <div class="modal-overlay" id="entryModal">
@@ -1060,6 +1055,14 @@
 </div>
 
 </div><!-- /appMain -->
+
+<!-- FAB GROUP: outside appMain so position:fixed works correctly on all mobile browsers -->
+<div class="fab-group" id="fabGroup" style="display:none">
+  <div class="fab-tip">Ingreso</div>
+  <button class="fab-income" onclick="openEntryModal(true)" title="Agregar ingreso">+</button>
+  <button class="fab-expense" onclick="openEntryModal(false)" title="Agregar gasto">−</button>
+  <div class="fab-tip">Gasto</div>
+</div>
 
 <script>
 // ============================================================
@@ -1926,6 +1929,22 @@ const EM = {
   selectCard(name) {
     this.cardName = name;
     document.getElementById('entry-card-new').value = '';
+    this.updateQuotaPreview();
+  },
+
+  updateQuotaPreview() {
+    const amount = parseFloat(this.amountStr) || 0;
+    const qi     = document.getElementById('entryQuotasInput');
+    const quotas = Math.max(1, parseInt(qi?.value) || 1);
+    const prev   = document.getElementById('entry-quota-preview');
+    if (prev) {
+      if (amount > 0 && quotas > 1) {
+        prev.textContent = fmtCOP(Math.ceil(amount / quotas)) + '/mes';
+        prev.style.display = '';
+      } else {
+        prev.style.display = 'none';
+      }
+    }
   },
 
   save() {
@@ -1946,8 +1965,24 @@ const EM = {
 
     } else if (method === 'card') {
       const cardTyped = document.getElementById('entry-card-new').value.trim();
+      const cardName  = cardTyped || this.cardName;
+      if (!cardName) { alert('Escribe o selecciona el nombre de la tarjeta'); return; }
+
       const qi     = document.getElementById('entryQuotasInput');
       const quotas = Math.max(1, parseInt(qi?.value) || 1);
+
+      // Guardar en registro informativo (no afecta ningún balance)
+      const registro = getTCRegistro();
+      registro.push({
+        id       : Date.now().toString(),
+        nombre   : note || 'Compra con tarjeta',
+        valor    : amount,
+        tarjeta  : cardName,
+        cuotas   : quotas,
+        fecha    : date,
+        nota     : '',
+        historial: []
+      });
       saveTCRegistro(registro);
       // Refresh tc list if the modal is open
       const tcrModal = document.getElementById('tcRegistroModal');
@@ -3189,6 +3224,8 @@ function showApp(user) {
   hideLoadingScreen();
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appMain').style.display     = 'block';
+  const fab = document.getElementById('fabGroup');
+  if (fab) fab.style.display = 'flex';
   if (user) {
     const emailEl = document.getElementById('user-email-display');
     if (emailEl) emailEl.textContent = user.displayName || user.email || 'Usuario';
