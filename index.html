@@ -1054,15 +1054,15 @@
   </div>
 </div>
 
-</div><!-- /appMain -->
-
-<!-- FAB GROUP: outside appMain so position:fixed works correctly on all mobile browsers -->
-<div class="fab-group" id="fabGroup" style="visibility:hidden">
+<!-- FAB GROUP -->
+<div class="fab-group">
   <div class="fab-tip">Ingreso</div>
   <button class="fab-income" onclick="openEntryModal(true)" title="Agregar ingreso">+</button>
   <button class="fab-expense" onclick="openEntryModal(false)" title="Agregar gasto">−</button>
   <div class="fab-tip">Gasto</div>
 </div>
+
+</div><!-- /appMain -->
 
 <script>
 // ============================================================
@@ -3229,8 +3229,6 @@ function showApp(user) {
   hideLoadingScreen();
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appMain').style.display     = 'block';
-  const fab = document.getElementById('fabGroup');
-  if (fab) fab.style.visibility = 'visible';
   if (user) {
     const emailEl = document.getElementById('user-email-display');
     if (emailEl) emailEl.textContent = user.displayName || user.email || 'Usuario';
@@ -3302,8 +3300,6 @@ async function logoutUser() {
   if (!window._signOut || !window._fbAuth) return;
   if (!confirm('¿Cerrar sesión?')) return;
   await window._signOut(window._fbAuth);
-  const fab = document.getElementById('fabGroup');
-  if (fab) fab.style.visibility = 'hidden';
   // Disable Firestore sync
   window._origSetStorage = null;
   fsDB = null;
