@@ -4176,39 +4176,5 @@ function confirmImport() {
   renderCards();
 }
 </script>
-<!-- Service Worker registration for offline support + auto-update -->
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js')
-      .then(function(reg) {
-        console.log('[SW] Registrado:', reg.scope);
-
-        // Detectar cuando hay una nueva versión instalándose
-        reg.addEventListener('updatefound', function() {
-          const newWorker = reg.installing;
-          newWorker.addEventListener('statechange', function() {
-            // Nueva versión lista y esperando activación
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // Activar inmediatamente sin esperar al cierre de pestañas
-              newWorker.postMessage({ type: 'SKIP_WAITING' });
-            }
-          });
-        });
-      })
-      .catch(function(err) { console.warn('[SW] Error:', err); });
-
-    // Cuando el SW activa una nueva versión → recargar la página automáticamente
-    var refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function() {
-      if (!refreshing) {
-        refreshing = true;
-        console.log('[SW] Nueva versión activa — recargando...');
-        window.location.reload();
-      }
-    });
-  });
-}
-</script>
 </body>
 </html>
