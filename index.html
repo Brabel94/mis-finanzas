@@ -218,7 +218,9 @@
 
   @media (min-width: 600px) {
     .dash-grid { grid-template-columns: repeat(4, 1fr); }
-  }  .fijo-item.paid { opacity: 0.6; }
+  .fijo-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .fijo-item:last-child { border-bottom: none; }
+  .fijo-item.paid { opacity: 0.65; }
   .fijo-check { width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: all 0.15s; }
   .fijo-check:hover { border-color: var(--green); }
   .fijo-check.checked { background: var(--green); border-color: var(--green); color: white; }
