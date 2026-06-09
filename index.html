@@ -2502,6 +2502,7 @@ function renderChartHistorial() {
 
   const activeCard = filterEl._activeCard;
   const filteredSummaries = Object.values(summaries).filter(s => !activeCard || s.card === activeCard);
+  const byMonth = {};
   allMonths.forEach(m => { byMonth[m] = { pagoTotal:0, pagoMin:0, intereses:0, cuotaManejo:0 }; });
   filteredSummaries.forEach(s => {
     const key = s.year + '-' + String(s.month+1).padStart(2,'0');
@@ -2599,7 +2600,13 @@ function renderChartCompras() {
 
   const fieldLabels = { quotaAmt:'Cuota/mes', total:'Valor total', saldo:'Saldo pendiente' };
 
-  // ── BARS view ─────────────────────────────────────────
+  // Filter + sort purchases
+  let filtered = cardFilter ? purchases.filter(p => p.card === cardFilter) : purchases.slice();
+  filtered.sort((a,b) => {
+    const va = sortField==='total' ? a.total : (sortField==='saldo' ? (a.saldoPendiente||0) : a.quotaAmt);
+    const vb = sortField==='total' ? b.total : (sortField==='saldo' ? (b.saldoPendiente||0) : b.quotaAmt);
+    return vb - va;
+  });
   if (view === 'bars') {
     const maxVal = filtered.length
       ? Math.max(...filtered.map(p => sortField==='total' ? p.total : (sortField==='saldo' ? (p.saldoPendiente||0) : p.quotaAmt)), 1)
