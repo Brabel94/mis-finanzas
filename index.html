@@ -3778,6 +3778,10 @@ let importData = null;
 function handleExtractoFile(input) {
   const file = input.files[0];
   if (!file) return;
+  // Reset file input so the same file can be selected again
+  input.value = '';
+  // Open the modal first, then show loading
+  document.getElementById('importModal').classList.add('show');
   showImportStep('loading');
   const reader = new FileReader();
   reader.onload = function(e) {
