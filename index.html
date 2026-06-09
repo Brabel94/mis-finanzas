@@ -3668,268 +3668,290 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- ===== MODAL: MIS COMPRAS TC (registro informativo) ===== -->
 <div class="modal-overlay" id="tcRegistroModal">
-  <div class="modal" style="max-width:780px;max-height:92vh;overflow-y:auto;padding:22px">
+  <div class="modal" style="max-width:960px;max-height:94vh;overflow:hidden;padding:20px;display:flex;flex-direction:column">
     <div class="modal-handle"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0">
       <div>
         <div class="modal-title" style="margin:0">📝 Mis compras con tarjeta</div>
-        <div style="font-size:12px;color:var(--text3);margin-top:2px">Registro informativo · no afecta ningún balance</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Registro informativo · edita directamente en la tabla · no afecta ningún balance</div>
       </div>
       <button onclick="closeModal('tcRegistroModal')" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;font-family:inherit;color:var(--text2)">✕</button>
     </div>
 
-    <!-- Buscador + ordenamiento + filtro mes -->
-    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+    <!-- Buscador + mes + botones -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0">
       <div style="flex:1;min-width:160px;position:relative">
         <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none">🔍</span>
-        <input type="text" id="tcr-search" placeholder="Buscar compra, tarjeta..." oninput="renderTCRegistro()"
+        <input type="text" id="tcr-search" placeholder="Buscar en tabla..." oninput="renderTCRegistro()"
           style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg);box-sizing:border-box">
       </div>
       <select id="tcr-month" onchange="renderTCRegistro()"
-        style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg);min-width:130px">
+        style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg)">
         <option value="">📅 Todos los meses</option>
       </select>
-      <select id="tcr-sort" onchange="renderTCRegistro()"
-        style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg)">
-        <option value="date-desc">Más reciente</option>
-        <option value="amount-desc">Mayor valor</option>
-        <option value="amount-asc">Menor valor</option>
-        <option value="name-asc">A → Z</option>
-      </select>
-      <button onclick="openEntryModal(false);setTimeout(function(){EM.setMethod('card')},50)" style="background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">+ Nueva</button>
+      <button onclick="tcrAddRow()" style="background:var(--green);color:white;border:none;border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">+ Nueva fila</button>
+      <button onclick="openEntryModal(false);setTimeout(function(){EM.setMethod('card')},50)" style="background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">💳 Registrar gasto</button>
     </div>
 
-    <!-- Resumen KPIs -->
-    <div id="tcr-kpis" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap"></div>
+    <!-- KPIs -->
+    <div id="tcr-kpis" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0"></div>
 
-    <!-- Lista -->
-    <div id="tcr-list">
-      <div class="empty"><div class="empty-icon">🛒</div><p>Sin compras registradas.<br>Usa el botón + Nueva o registra un gasto con tarjeta.</p></div>
+    <!-- Tabla Excel -->
+    <div style="flex:1;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">
+      <table id="tcr-table" style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--green-light);position:sticky;top:0;z-index:2">
+            <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);white-space:nowrap;cursor:pointer;user-select:none;min-width:100px" onclick="tcrSort('fecha')">Fecha <span id="tcr-sort-fecha"></span></th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);white-space:nowrap;cursor:pointer;user-select:none;min-width:200px" onclick="tcrSort('nombre')">Nombre / Descripción <span id="tcr-sort-nombre"></span></th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);white-space:nowrap;cursor:pointer;user-select:none;min-width:140px" onclick="tcrSort('tarjeta')">Tarjeta <span id="tcr-sort-tarjeta"></span></th>
+            <th style="padding:10px 12px;text-align:right;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);white-space:nowrap;cursor:pointer;user-select:none;min-width:110px" onclick="tcrSort('valor')">Valor total <span id="tcr-sort-valor"></span></th>
+            <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);white-space:nowrap;min-width:70px">Cuotas</th>
+            <th style="padding:10px 12px;text-align:right;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);white-space:nowrap;min-width:110px">Cuota/mes</th>
+            <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);min-width:160px">Nota</th>
+            <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--green-dark);border-bottom:2px solid var(--green);min-width:50px"></th>
+          </tr>
+        </thead>
+        <tbody id="tcr-tbody">
+          <tr><td colspan="8" style="padding:30px;text-align:center;color:var(--text3)">Sin compras registradas</td></tr>
+        </tbody>
+        <!-- Totales footer -->
+        <tfoot id="tcr-tfoot" style="display:none">
+          <tr style="background:var(--bg);border-top:2px solid var(--border)">
+            <td colspan="3" style="padding:10px 12px;font-weight:600;font-size:12px;color:var(--text2)">TOTAL (<span id="tcr-count">0</span> compras)</td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700;font-family:'DM Mono',monospace;color:var(--blue)" id="tcr-total-val"></td>
+            <td></td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700;font-family:'DM Mono',monospace;color:var(--text2)" id="tcr-total-cuota"></td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
-  </div>
-</div>
-
-<!-- ===== MODAL: EDITAR COMPRA TC ===== -->
-<div class="modal-overlay" id="tcEditModal">
-  <div class="modal" style="max-width:480px;max-height:92vh;overflow-y:auto">
-    <div class="modal-handle"></div>
-    <div class="modal-title">✏️ Editar compra</div>
-    <input type="hidden" id="tce-id">
-    <div class="field">
-      <label>Nombre / Descripción</label>
-      <input type="text" id="tce-nombre" placeholder="Ej: Zapatos Nike, Televisor...">
-    </div>
-    <div class="field">
-      <label>Valor total (COP)</label>
-      <input type="number" id="tce-valor" placeholder="0" min="0">
-    </div>
-    <div class="field">
-      <label>Tarjeta</label>
-      <input type="text" id="tce-tarjeta" placeholder="Nombre de la tarjeta">
-    </div>
-    <div class="field">
-      <label>Cuotas</label>
-      <input type="number" id="tce-cuotas" placeholder="1" min="1" max="120" value="1">
-    </div>
-    <div class="field">
-      <label>Fecha</label>
-      <input type="date" id="tce-fecha">
-    </div>
-    <div class="field">
-      <label>Nota</label>
-      <input type="text" id="tce-nota" placeholder="Observaciones, detalles...">
-    </div>
-    <button class="btn" style="background:var(--blue);color:white" onclick="saveTCEdit()">💾 Guardar cambios</button>
-    <button class="btn btn-outline" onclick="closeModal('tcEditModal')">Cancelar</button>
-
-    <!-- Historial de cambios -->
-    <div id="tce-historial" style="margin-top:16px"></div>
   </div>
 </div>
 
 <script>
 // ============================================================
-// TC REGISTRO — registro informativo de compras con tarjeta
+// TC REGISTRO — tabla Excel de compras con tarjeta
 // Solo informativo, no afecta ningún balance ni cálculo
 // ============================================================
-function getTCRegistro()       { return getStorage('tc-registro') || []; }
-function saveTCRegistro(arr)   { setStorage('tc-registro', arr); }
+function getTCRegistro()     { return getStorage('tc-registro') || []; }
+function saveTCRegistro(arr) { setStorage('tc-registro', arr); }
+
+let tcrSortField = 'fecha';
+let tcrSortAsc   = false;
 
 function openTCRegistroModal() {
   renderTCRegistro();
   document.getElementById('tcRegistroModal').classList.add('show');
 }
 
-function renderTCRegistro() {
-  const items   = getTCRegistro();
-  const search  = (document.getElementById('tcr-search')?.value || '').toLowerCase().trim();
-  const sortVal = document.getElementById('tcr-sort')?.value || 'date-desc';
+function tcrSort(field) {
+  if (tcrSortField === field) { tcrSortAsc = !tcrSortAsc; }
+  else { tcrSortField = field; tcrSortAsc = field === 'nombre' || field === 'tarjeta'; }
+  renderTCRegistro();
+}
 
-  // Populate month dropdown dynamically
+function renderTCRegistro() {
+  const items  = getTCRegistro();
+  const search = (document.getElementById('tcr-search')?.value || '').toLowerCase().trim();
+
+  // Populate month dropdown
   const monthSel = document.getElementById('tcr-month');
   if (monthSel) {
-    const saved = monthSel.value;
+    const saved  = monthSel.value;
     const months = [...new Set(
       items.filter(i => i.fecha && i.fecha.length >= 7).map(i => i.fecha.substring(0, 7))
     )].sort().reverse();
     monthSel.innerHTML = '<option value="">📅 Todos los meses</option>' +
       months.map(function(m) {
-        const parts = m.split('-');
-        const label = (MONTHS[parseInt(parts[1]) - 1] || parts[1]) + ' ' + parts[0];
-        return '<option value="' + m + '"' + (m === saved ? ' selected' : '') + '>' + label + '</option>';
+        const p = m.split('-');
+        return '<option value="' + m + '"' + (m === saved ? ' selected' : '') + '>' +
+          (MONTHS[parseInt(p[1]) - 1] || p[1]) + ' ' + p[0] + '</option>';
       }).join('');
   }
   const monthFilter = monthSel ? monthSel.value : '';
 
-  // KPIs (always based on all items, not filtered)
+  // KPIs
   const kpisEl = document.getElementById('tcr-kpis');
-  if (kpisEl) {
-    if (items.length) {
-      const totalVal = items.reduce((s,i) => s + (i.valor||0), 0);
-      kpisEl.innerHTML =
-        '<div style="background:var(--blue-light);border-radius:var(--radius-sm);padding:10px 14px;flex:1;min-width:120px">' +
-          '<div style="font-size:10px;color:var(--text2)">Total registrado</div>' +
-          '<div style="font-family:\'DM Mono\',monospace;font-size:15px;font-weight:700;color:var(--blue)">' + fmtCOP(totalVal) + '</div>' +
-        '</div>' +
-        '<div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 14px;flex:1;min-width:120px">' +
-          '<div style="font-size:10px;color:var(--text2)">Compras registradas</div>' +
-          '<div style="font-size:15px;font-weight:700;color:var(--text)">' + items.length + '</div>' +
-        '</div>';
-    } else {
-      kpisEl.innerHTML = '';
-    }
-  }
+  if (kpisEl && items.length) {
+    const totalVal  = items.reduce((s,i) => s + (i.valor||0), 0);
+    const totalCuota= items.reduce((s,i) => s + Math.ceil((i.valor||0) / Math.max(1, i.cuotas||1)), 0);
+    kpisEl.innerHTML =
+      '<div style="background:var(--blue-light);border-radius:var(--radius-sm);padding:8px 14px">' +
+        '<div style="font-size:10px;color:var(--text2)">Total compras</div>' +
+        '<div style="font-family:\'DM Mono\',monospace;font-size:14px;font-weight:700;color:var(--blue)">' + fmtCOP(totalVal) + '</div>' +
+      '</div>' +
+      '<div style="background:var(--bg);border-radius:var(--radius-sm);padding:8px 14px;border:1px solid var(--border)">' +
+        '<div style="font-size:10px;color:var(--text2)">Cuota mensual total</div>' +
+        '<div style="font-family:\'DM Mono\',monospace;font-size:14px;font-weight:700;color:var(--text)">' + fmtCOP(totalCuota) + '</div>' +
+      '</div>' +
+      '<div style="background:var(--bg);border-radius:var(--radius-sm);padding:8px 14px;border:1px solid var(--border)">' +
+        '<div style="font-size:10px;color:var(--text2)">Registros</div>' +
+        '<div style="font-size:14px;font-weight:700;color:var(--text)">' + items.length + '</div>' +
+      '</div>';
+  } else if (kpisEl) { kpisEl.innerHTML = ''; }
 
-  // Filter: text + month
-  var filtered = items.filter(function(i) {
-    const matchText = !search ||
+  // Filter
+  let filtered = items.filter(function(i) {
+    const matchText  = !search ||
       (i.nombre||'').toLowerCase().includes(search) ||
       (i.tarjeta||'').toLowerCase().includes(search) ||
       (i.nota||'').toLowerCase().includes(search);
-    const matchMonth = !monthFilter ||
-      (i.fecha && i.fecha.startsWith(monthFilter));
+    const matchMonth = !monthFilter || (i.fecha||'').startsWith(monthFilter);
     return matchText && matchMonth;
   });
+
+  // Sort
+  const sf = tcrSortField, asc = tcrSortAsc;
   filtered.sort(function(a,b) {
-    if (sortVal === 'amount-desc') return (b.valor||0) - (a.valor||0);
-    if (sortVal === 'amount-asc')  return (a.valor||0) - (b.valor||0);
-    if (sortVal === 'name-asc')    return (a.nombre||'').localeCompare(b.nombre||'');
-    return new Date(b.fecha||0) - new Date(a.fecha||0);
+    let va = a[sf] || '', vb = b[sf] || '';
+    if (sf === 'valor') { va = a.valor||0; vb = b.valor||0; return asc ? va-vb : vb-va; }
+    return asc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
   });
 
-  var listEl = document.getElementById('tcr-list');
-  if (!listEl) return;
+  // Update sort arrows
+  ['fecha','nombre','tarjeta','valor'].forEach(function(f) {
+    const el = document.getElementById('tcr-sort-' + f);
+    if (el) el.textContent = tcrSortField === f ? (tcrSortAsc ? ' ▲' : ' ▼') : '';
+  });
+
+  const tbody  = document.getElementById('tcr-tbody');
+  const tfoot  = document.getElementById('tcr-tfoot');
+  const regCards = getRegCards();
+
   if (!filtered.length) {
-    const noMsg = (search || monthFilter)
-      ? '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Sin resultados para los filtros aplicados</div>'
-      : '<div class="empty"><div class="empty-icon">🛒</div><p>Sin compras registradas.<br>Usa el botón + Nueva o registra un gasto con tarjeta.</p></div>';
-    listEl.innerHTML = noMsg;
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:30px;text-align:center;color:var(--text3)">' +
+      (search || monthFilter ? 'Sin resultados para los filtros aplicados' : 'Sin compras registradas. Usa + Nueva fila o 💳 Registrar gasto') + '</td></tr>';
+    if (tfoot) tfoot.style.display = 'none';
     return;
   }
 
-  var regCards = getRegCards();
-  listEl.innerHTML = filtered.map(function(item) {
-    var rc       = regCards.find(function(r){ return r.name === item.tarjeta; });
-    var color    = rc ? rc.color : '#e67e22';
-    var cuotaAmt = item.cuotas > 1 ? Math.ceil((item.valor||0) / item.cuotas) : (item.valor||0);
-    var histLen  = (item.historial||[]).length;
-    var nombre   = search
-      ? (item.nombre||'').replace(new RegExp('(' + search + ')', 'gi'), '<mark style="background:#fff3b0;border-radius:2px">$1</mark>')
-      : (item.nombre||'Sin nombre');
+  // Build rows — inline editable cells
+  tbody.innerHTML = filtered.map(function(item) {
+    const rc       = regCards.find(function(r){ return r.name === item.tarjeta; });
+    const color    = rc ? rc.color : '#e67e22';
+    const cuotaAmt = Math.ceil((item.valor||0) / Math.max(1, item.cuotas||1));
+    const rowBg    = search && (
+      (item.nombre||'').toLowerCase().includes(search) ||
+      (item.tarjeta||'').toLowerCase().includes(search) ||
+      (item.nota||'').toLowerCase().includes(search)
+    ) ? 'background:#fffde7' : '';
 
-    return '<div style="background:var(--card);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:8px;box-shadow:var(--shadow);border-left:3px solid ' + color + '">' +
-      '<div style="display:flex;align-items:flex-start;gap:10px">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:14px;font-weight:600;margin-bottom:4px">' + nombre + '</div>' +
-          '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">' +
-            '<span style="background:' + color + '22;color:' + color + ';padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600">💳 ' + item.tarjeta + '</span>' +
-            '<span style="font-size:11px;color:var(--text3)">' + (item.fecha||'—') + '</span>' +
-            '<span style="font-size:11px;color:var(--text2)">' + (item.cuotas > 1 ? item.cuotas + ' cuotas · ' + fmtCOP(cuotaAmt) + '/mes' : 'Contado') + '</span>' +
-            (item.nota ? '<span style="font-size:11px;color:var(--text3);font-style:italic">' + item.nota + '</span>' : '') +
-            (histLen > 0 ? '<span style="font-size:10px;background:var(--yellow-light);color:var(--yellow);padding:1px 7px;border-radius:10px">✏️ ' + histLen + ' edición' + (histLen>1?'es':'') + '</span>' : '') +
-          '</div>' +
-        '</div>' +
-        '<div style="text-align:right;flex-shrink:0">' +
-          '<div style="font-family:\'DM Mono\',monospace;font-size:16px;font-weight:700;color:var(--text)">' + fmtCOP(item.valor||0) + '</div>' +
-          '<div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end">' +
-            '<button onclick="openTCEdit(\'' + item.id + '\')" style="background:var(--blue-light);color:var(--blue);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">✏️ Editar</button>' +
-            '<button onclick="deleteTCRegistro(\'' + item.id + '\')" style="background:var(--red-light);color:var(--red);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">✕</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
+    return '<tr class="tcr-row" data-id="' + item.id + '" style="border-bottom:1px solid var(--border);' + rowBg + '">' +
+      // Fecha
+      '<td style="padding:0"><input type="date" value="' + (item.fecha||'') + '" ' +
+        'onchange="tcrUpdateCell(\'' + item.id + '\',\'fecha\',this.value)" ' +
+        'style="width:100%;padding:9px 10px;border:none;background:transparent;font-size:13px;font-family:inherit;cursor:pointer;box-sizing:border-box"></td>' +
+      // Nombre
+      '<td style="padding:0"><input type="text" value="' + escHtml(item.nombre||'') + '" placeholder="Descripción..." ' +
+        'onchange="tcrUpdateCell(\'' + item.id + '\',\'nombre\',this.value)" ' +
+        'style="width:100%;padding:9px 10px;border:none;background:transparent;font-size:13px;font-family:inherit;box-sizing:border-box"></td>' +
+      // Tarjeta
+      '<td style="padding:0"><input type="text" value="' + escHtml(item.tarjeta||'') + '" placeholder="Tarjeta..." ' +
+        'onchange="tcrUpdateCell(\'' + item.id + '\',\'tarjeta\',this.value)" ' +
+        'style="width:100%;padding:9px 10px;border:none;background:transparent;font-size:13px;font-family:inherit;color:' + color + ';font-weight:600;box-sizing:border-box"></td>' +
+      // Valor
+      '<td style="padding:0"><input type="number" value="' + (item.valor||0) + '" min="0" ' +
+        'onchange="tcrUpdateCell(\'' + item.id + '\',\'valor\',parseFloat(this.value)||0)" ' +
+        'style="width:100%;padding:9px 10px;border:none;background:transparent;font-size:13px;font-family:\'DM Mono\',monospace;text-align:right;box-sizing:border-box"></td>' +
+      // Cuotas
+      '<td style="padding:0"><input type="number" value="' + (item.cuotas||1) + '" min="1" max="120" ' +
+        'onchange="tcrUpdateCell(\'' + item.id + '\',\'cuotas\',parseInt(this.value)||1)" ' +
+        'style="width:100%;padding:9px 10px;border:none;background:transparent;font-size:13px;font-family:inherit;text-align:center;box-sizing:border-box"></td>' +
+      // Cuota/mes (calculada, read-only)
+      '<td style="padding:9px 12px;text-align:right;font-family:\'DM Mono\',monospace;font-size:13px;color:var(--text2);white-space:nowrap">' +
+        fmtCOP(cuotaAmt) + '</td>' +
+      // Nota
+      '<td style="padding:0"><input type="text" value="' + escHtml(item.nota||'') + '" placeholder="Nota..." ' +
+        'onchange="tcrUpdateCell(\'' + item.id + '\',\'nota\',this.value)" ' +
+        'style="width:100%;padding:9px 10px;border:none;background:transparent;font-size:13px;font-family:inherit;box-sizing:border-box"></td>' +
+      // Eliminar
+      '<td style="padding:6px;text-align:center">' +
+        '<button onclick="deleteTCRegistro(\'' + item.id + '\')" ' +
+          'title="Eliminar fila" ' +
+          'style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px 8px;border-radius:6px" ' +
+          'onmouseover="this.style.background=\'var(--red-light)\';this.style.color=\'var(--red)\'" ' +
+          'onmouseout="this.style.background=\'none\';this.style.color=\'var(--text3)\'">✕</button>' +
+      '</td></tr>';
   }).join('');
+
+  // Highlight active cells on focus
+  tbody.querySelectorAll('input').forEach(function(inp) {
+    inp.addEventListener('focus', function() { this.closest('tr').style.background = 'var(--green-light)'; });
+    inp.addEventListener('blur',  function() { this.closest('tr').style.background = ''; });
+  });
+
+  // Footer totals
+  const totalVal   = filtered.reduce((s,i) => s + (i.valor||0), 0);
+  const totalCuota = filtered.reduce((s,i) => s + Math.ceil((i.valor||0)/Math.max(1,i.cuotas||1)), 0);
+  document.getElementById('tcr-count').textContent     = filtered.length;
+  document.getElementById('tcr-total-val').textContent  = fmtCOP(totalVal);
+  document.getElementById('tcr-total-cuota').textContent= fmtCOP(totalCuota);
+  if (tfoot) tfoot.style.display = '';
+}
+
+// Escape HTML for input values
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Update a single field in a row and save
+function tcrUpdateCell(id, field, value) {
+  const items = getTCRegistro();
+  const idx   = items.findIndex(function(i){ return i.id === id; });
+  if (idx === -1) return;
+  const now = new Date().toLocaleString('es-CO', { dateStyle:'short', timeStyle:'short' });
+  const old = items[idx][field];
+  items[idx][field] = value;
+  // Track history
+  if (String(old) !== String(value)) {
+    if (!items[idx].historial) items[idx].historial = [];
+    const campos = { nombre:'Nombre', valor:'Valor', tarjeta:'Tarjeta', cuotas:'Cuotas', fecha:'Fecha', nota:'Nota' };
+    items[idx].historial.push({ fecha: now, campo: campos[field]||field, antes: String(old), despues: String(value) });
+  }
+  saveTCRegistro(items);
+  // Refresh cuota/mes column without full re-render
+  renderTCRegistro();
+}
+
+// Add a blank row at the end
+function tcrAddRow() {
+  const items = getTCRegistro();
+  items.push({
+    id      : Date.now().toString(),
+    nombre  : '',
+    valor   : 0,
+    tarjeta : '',
+    cuotas  : 1,
+    fecha   : new Date().toISOString().slice(0, 10),
+    nota    : '',
+    historial: []
+  });
+  saveTCRegistro(items);
+  renderTCRegistro();
+  // Scroll to bottom and focus first cell of new row
+  const tbody = document.getElementById('tcr-tbody');
+  if (tbody) {
+    setTimeout(function() {
+      const lastRow = tbody.querySelector('tr:last-child');
+      if (lastRow) {
+        lastRow.scrollIntoView({ behavior:'smooth', block:'nearest' });
+        const firstInput = lastRow.querySelector('input');
+        if (firstInput) firstInput.focus();
+      }
+    }, 80);
+  }
 }
 
 function deleteTCRegistro(id) {
-  if (!confirm('¿Eliminar esta compra del registro?')) return;
+  if (!confirm('¿Eliminar esta fila?')) return;
   saveTCRegistro(getTCRegistro().filter(function(i){ return i.id !== id; }));
   renderTCRegistro();
 }
 
-function openTCEdit(id) {
-  var item = getTCRegistro().find(function(i){ return i.id === id; });
-  if (!item) return;
-  document.getElementById('tce-id').value      = id;
-  document.getElementById('tce-nombre').value  = item.nombre  || '';
-  document.getElementById('tce-valor').value   = item.valor   || '';
-  document.getElementById('tce-tarjeta').value = item.tarjeta || '';
-  document.getElementById('tce-cuotas').value  = item.cuotas  || 1;
-  document.getElementById('tce-fecha').value   = item.fecha   || '';
-  document.getElementById('tce-nota').value    = item.nota    || '';
 
-  var hist   = item.historial || [];
-  var histEl = document.getElementById('tce-historial');
-  if (hist.length) {
-    histEl.innerHTML =
-      '<div style="border-top:1px solid var(--border);padding-top:12px">' +
-      '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">📋 Historial de cambios</div>' +
-      hist.slice().reverse().map(function(h) {
-        return '<div style="background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px">' +
-          '<div style="color:var(--text3);margin-bottom:2px">' + h.fecha + '</div>' +
-          '<div><span style="font-weight:600;color:var(--text)">' + h.campo + ':</span> ' +
-          '<span style="color:var(--red);text-decoration:line-through">' + h.antes + '</span>' +
-          ' → <span style="color:var(--green-dark)">' + h.despues + '</span></div>' +
-          '</div>';
-      }).join('') +
-      '</div>';
-  } else {
-    histEl.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">Sin cambios registrados aún</div>';
-  }
-
-  document.getElementById('tcEditModal').classList.add('show');
-}
-
-function saveTCEdit() {
-  var id    = document.getElementById('tce-id').value;
-  var items = getTCRegistro();
-  var idx   = items.findIndex(function(i){ return i.id === id; });
-  if (idx === -1) return;
-  var old   = items[idx];
-  var now   = new Date().toLocaleString('es-CO', { dateStyle:'short', timeStyle:'short' });
-
-  var newData = {
-    nombre  : document.getElementById('tce-nombre').value.trim()  || old.nombre,
-    valor   : parseFloat(document.getElementById('tce-valor').value)  || old.valor,
-    tarjeta : document.getElementById('tce-tarjeta').value.trim() || old.tarjeta,
-    cuotas  : parseInt(document.getElementById('tce-cuotas').value)   || old.cuotas,
-    fecha   : document.getElementById('tce-fecha').value   || old.fecha,
-    nota    : document.getElementById('tce-nota').value.trim(),
-  };
-
-  var hist   = (old.historial || []).slice();
-  var campos = { nombre:'Nombre', valor:'Valor', tarjeta:'Tarjeta', cuotas:'Cuotas', fecha:'Fecha', nota:'Nota' };
-  Object.keys(campos).forEach(function(k) {
-    var antes   = String(old[k] != null ? old[k] : '');
-    var despues = String(newData[k] != null ? newData[k] : '');
-    if (antes !== despues) hist.push({ fecha: now, campo: campos[k], antes: antes, despues: despues });
-  });
-
-  items[idx] = Object.assign({}, old, newData, { historial: hist });
-  saveTCRegistro(items);
-  closeModal('tcEditModal');
-  renderTCRegistro();
-}
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
