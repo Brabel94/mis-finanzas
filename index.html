@@ -1949,8 +1949,8 @@ const EM = {
   openEdit(id) {
     const expense = getExpenses().find(e => e.id === id);
     if (!expense) return;
-    this.editId = id;
     this.open(false);
+    this.editId = id; // must be set AFTER open() which resets it to null
     // Pre-fill amount
     this.amountStr = String(expense.amount);
     const num     = expense.amount;
