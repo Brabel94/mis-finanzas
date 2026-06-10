@@ -1956,10 +1956,16 @@ const EM = {
     const note = document.getElementById('entryNote').value.trim();
     const date = document.getElementById('entryDate').value;
 
+    // Guardar en el mes que corresponde a la fecha ingresada
+    const dp   = (date && date.length >= 7) ? date.split('-') : null;
+    const tKey = dp ? (dp[0] + '-' + dp[1]) : monthKey();
+    const crossMonth = tKey !== monthKey();
+
     if (this.isIncome) {
-      const list = getIncomeList();
+      const raw  = getStorage(`income-${tKey}`);
+      const list = Array.isArray(raw) ? raw : (typeof raw === 'number' ? [{ id: 'legacy', amount: raw, note: 'Ingreso', date: '' }] : []);
       list.push({ id: Date.now().toString(), amount, note: note || 'Ingreso', date });
-      saveIncomeList(list);
+      setStorage(`income-${tKey}`, list);
 
     } else if (method === 'card') {
       const cardTyped = document.getElementById('entry-card-new').value.trim();
@@ -1987,17 +1993,16 @@ const EM = {
       if (tcrModal && tcrModal.classList.contains('show')) renderTCRegistro();
 
     } else {
-      const expense = {
-        id      : Date.now().toString(),
-        category: this.category,
-        amount, note, date
-      };
-      const expenses = getExpenses();
-      expenses.push(expense);
-      saveExpenses(expenses);
+      const expArr = getStorage(`expenses-${tKey}`) || [];
+      expArr.push({ id: Date.now().toString(), category: this.category, amount, note, date });
+      setStorage(`expenses-${tKey}`, expArr);
     }
 
     this.close();
+    if (crossMonth) {
+      const mName = MONTHS[parseInt(tKey.split('-')[1]) - 1] + ' ' + tKey.split('-')[0];
+      showToast('✅ Guardado en ' + mName);
+    }
     renderGastos();
     renderDashboard();
     if (document.querySelector('.tab.active')?.textContent.includes('Tarjetas')) renderCards();
@@ -3417,6 +3422,24 @@ function clearAllData() {
 // ============================================================
 // MODAL UTILS
 // ============================================================
+function showToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_toast';
+    t.style.cssText = 'position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(10px);background:#1a2e22;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.25s,transform 0.25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.25)';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(10px)';
+  }, 3000);
+}
+
 function closeModal(id) {
   document.getElementById(id).classList.remove('show');
   // Consume the history entry we pushed when opening
