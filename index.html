@@ -740,6 +740,34 @@
 
 
 
+  <!-- ===== MODAL: MONTO VARIABLE ===== -->
+  <div class="modal-overlay" id="varAmtModal">
+    <div class="modal" style="max-width:320px">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="varAmtTitle">📊 Gasto variable</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px" id="varAmtSub"></div>
+      <div class="field">
+        <label>¿Cuánto pagaste este mes?</label>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
+          <span style="font-size:13px;color:var(--text3);font-weight:600">$</span>
+          <input type="number" id="varAmtInput" min="0" placeholder="0"
+            style="border:none;background:transparent;font-size:18px;font-weight:700;color:var(--text);width:100%;outline:none;font-family:'DM Mono',monospace"
+            onkeydown="if(event.key==='Enter')_varAmtConfirm()">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button onclick="closeModal('varAmtModal')"
+          style="flex:1;padding:11px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--bg);color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+          Cancelar
+        </button>
+        <button onclick="_varAmtConfirm()"
+          style="flex:1;padding:11px;border-radius:var(--radius-sm);border:none;background:var(--green);color:white;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== MODAL: NUEVO FIJO (gasto o ingreso) ===== -->
   <div class="modal-overlay" id="fijoModal">
     <div class="modal" style="max-height:90vh;overflow-y:auto">
@@ -1724,16 +1752,21 @@ function renderGastos() {
   // Append paid fijos as informational section (no delete button, just info)
   const fijosPagadosList = getFijos().filter(f => getFijosPaid()[f.id]);
   if (fijosPagadosList.length) {
-    const fijoTotal = fijosPagadosList.reduce((s,f) => s+f.amount, 0);
+    const paidGObj2 = getFijosPaid();
+    const fijoTotal = fijosPagadosList.reduce((s,f) => s + paidAmount(f, paidGObj2), 0);
     const fijoItems = fijosPagadosList.map(f => {
-      const cat   = CATEGORIES.find(c => c.id === f.category) || { icon:'📌' };
+      const cat      = CATEGORIES.find(c => c.id === f.category) || { icon:'📌' };
+      const realAmt  = paidAmount(f, paidGObj2);
+      const amtHtml  = (f.variable && realAmt !== f.amount)
+        ? `${fmtCOP(realAmt)} <span style="font-size:10px;color:var(--text3);text-decoration:line-through">${fmtCOP(f.amount)}</span>`
+        : fmtCOP(realAmt);
       return `<div class="expense-item" style="opacity:0.75">
         <span class="expense-note" style="display:flex;align-items:center;gap:6px">
           <span style="font-size:13px">${cat.icon}</span>
           ${f.name}${f.note ? ' · <em style="color:var(--text3)">' + f.note + '</em>' : ''}
         </span>
         <span class="expense-date">día ${f.day}</span>
-        <span class="expense-amt">${fmtCOP(f.amount)}</span>
+        <span class="expense-amt">${amtHtml}</span>
         <button class="expense-del" title="Gestionar en Fijos" onclick="openFijosModal()" style="font-size:12px;opacity:0.5">📌</button>
       </div>`;
     }).join('');
@@ -1856,7 +1889,8 @@ function renderDonut(expenses) {
   expenses.forEach(e => { bycat[e.category] = (bycat[e.category] || 0) + e.amount; });
 
   // Add paid fijos as a special slice
-  const fijosPagados = getFijos().filter(f => getFijosPaid()[f.id]).reduce((s,f) => s+f.amount, 0);
+  const _fp = getFijosPaid();
+  const fijosPagados = getFijos().filter(f => _fp[f.id]).reduce((s,f) => s + paidAmount(f, _fp), 0);
   if (fijosPagados > 0) bycat['_fijos'] = fijosPagados;
 
   const total = Object.values(bycat).reduce((s,v) => s+v, 0);
@@ -2985,6 +3019,18 @@ let currentFijoType = 'gasto'; // 'gasto' | 'ingreso'
 
 let currentFijoTipo = 'fijo'; // 'fijo' | 'variable'
 
+function _varAmtConfirm() {
+  const raw     = document.getElementById('varAmtInput').value;
+  const realAmt = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+  if (!realAmt || realAmt <= 0) {
+    document.getElementById('varAmtInput').style.borderColor = 'var(--red)';
+    setTimeout(function(){ document.getElementById('varAmtInput').style.borderColor = ''; }, 1000);
+    return;
+  }
+  closeModal('varAmtModal');
+  if (window._varAmtCallback) { window._varAmtCallback(realAmt); window._varAmtCallback = null; }
+}
+
 function setFijoTipo(tipo) {
   currentFijoTipo = tipo;
   const btnFijo = document.getElementById('fijo-tipo-fijo');
@@ -3089,25 +3135,27 @@ function toggleFijoPaid(id, type) {
     const isNowPaid = !paid[id];
 
     if (isNowPaid) {
-      // Check if this is a variable gasto
       const fijo = getFijos().find(function(f){ return f.id === id; });
       if (fijo && fijo.variable) {
-        // Ask for real amount this month
-        const input = prompt(
-          '📊 Gasto variable: ' + fijo.name + '\n\n' +
-          'Monto estimado: ' + fmtCOP(fijo.amount) + '\n' +
-          '¿Cuánto pagaste este mes? (COP)',
-          fijo.amount
-        );
-        if (input === null) return; // cancelled — don't mark as paid
-        const realAmt = parseFloat(String(input).replace(/[^0-9.]/g,''));
-        if (!realAmt || realAmt <= 0) { alert('Ingresa un monto válido'); return; }
-        paid[id] = realAmt; // store actual amount paid
+        // Show nice modal instead of prompt()
+        document.getElementById('varAmtTitle').textContent = '📊 ' + fijo.name;
+        document.getElementById('varAmtSub').textContent   = 'Estimado: ' + fmtCOP(fijo.amount);
+        const inp = document.getElementById('varAmtInput');
+        inp.value = fijo.amount;
+        document.getElementById('varAmtModal').classList.add('show');
+        setTimeout(function(){ inp.select(); }, 100);
+        window._varAmtCallback = function(realAmt) {
+          const p2 = getFijosPaid();
+          p2[id] = realAmt;
+          saveFijosPaid(p2);
+          renderFijos(); renderDashboard(); renderGastos();
+        };
+        return; // rest handled by _varAmtConfirm
       } else {
-        paid[id] = fijo ? fijo.amount : true; // store amount for fixed
+        paid[id] = fijo ? fijo.amount : true;
       }
     } else {
-      paid[id] = false; // unmark
+      paid[id] = false;
     }
     saveFijosPaid(paid);
   }
