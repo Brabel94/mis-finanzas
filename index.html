@@ -246,7 +246,8 @@
   .fab-tip { font-size: 9px; font-weight: 700; color: white; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 2px 7px; letter-spacing: 0.3px; pointer-events: none; }
 
   /* ── MODAL TIPO ───────────────────────────────────────── */  .mtt-btn { flex:1; padding: 11px; border-radius: var(--radius-sm); border: 2px solid var(--border); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; background: var(--bg); color: var(--text2); }
-  .mtt-btn  .mtt-btn.active-income  { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+  .mtt-btn.active-income  { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+  .mtt-btn.active-expense { background: var(--red-light);   border-color: var(--red);   color: var(--red); }
   /* ── TARJETAS (compras) ──────────────────────────────── */
   .cp-card-btn { border: 2px solid var(--border); border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; background: var(--bg); color: var(--text2); transition: all 0.15s; }
   .cp-card-btn:hover { border-color: var(--blue); }
@@ -1937,15 +1938,10 @@ const EM = {
     const amount = parseFloat(this.amountStr) || 0;
     const qi     = document.getElementById('entryQuotasInput');
     const quotas = Math.max(1, parseInt(qi?.value) || 1);
-    const prev   = document.getElementById('entry-quota-preview');
-    if (prev) {
-      if (amount > 0 && quotas > 1) {
-        prev.textContent = fmtCOP(Math.ceil(amount / quotas)) + '/mes';
-        prev.style.display = '';
-      } else {
-        prev.style.display = 'none';
-      }
-    }
+    const prev   = document.getElementById('entryQuotaPreview');
+    const months = document.getElementById('entryQuotasMonths');
+    if (prev)   prev.textContent   = fmtCOP(Math.ceil(amount / quotas));
+    if (months) months.textContent = quotas + (quotas !== 1 ? ' meses' : ' mes');
   },
 
   save() {
@@ -2487,9 +2483,23 @@ function renderChartMinimos() {
   }));
   // Total line on top
   datasets.push({
-    label       : 'Total mínimo',
-    type        : 'line',
-    data        : allMonths.map(m => Object.values(byMonth[m]).reduce((s,v) => s+v, 0)),
+    label          : 'Total mínimo',
+    type           : 'line',
+    data           : allMonths.map(m => Object.values(byMonth[m]).reduce((s,v) => s+v, 0)),
+    borderColor    : '#333',
+    backgroundColor: 'transparent',
+    borderWidth    : 2,
+    pointRadius    : 4,
+    tension        : 0.3,
+    fill           : false,
+    order          : 0,
+  });
+
+  if (chtMinChart) chtMinChart.destroy();
+  const ctx = document.getElementById('cht-bar-minimos').getContext('2d');
+  chtMinChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -2505,7 +2515,10 @@ function renderChartMinimos() {
   });
 
   // Summary table: totals per month
-  const totals = allMonths.map(m => ({ label: labels[allMonths.indexOf(m)], total: Object.values(byMonth[m]).reduce((s,v) => s+v, 0) }));
+  const totals     = allMonths.map(m => ({ label: labels[allMonths.indexOf(m)], total: Object.values(byMonth[m]).reduce((s,v) => s+v, 0) }));
+  const grandTotal = totals.reduce((s, t) => s + t.total, 0);
+  const avg        = totals.length ? grandTotal / totals.length : 0;
+  const maxMonth   = totals.reduce((best, t) => t.total > best.total ? t : best, { label: '—', total: 0 });
 
   document.getElementById('cht-min-table').innerHTML =
     '<div style="background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-top:4px">' +
