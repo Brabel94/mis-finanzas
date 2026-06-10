@@ -1822,7 +1822,8 @@ const EM = {
 
     document.getElementById('entryAmountValue').textContent = '0';
     document.getElementById('entryNote').value = '';
-    document.getElementById('entryDate').value = new Date().toISOString().slice(0,10);
+    const _td = new Date();
+    document.getElementById('entryDate').value = _td.getFullYear() + '-' + String(_td.getMonth()+1).padStart(2,'0') + '-' + String(_td.getDate()).padStart(2,'0');
 
     this.setType(isIncome ? 'income' : 'expense');
     this.buildCatGrid();
@@ -3804,7 +3805,7 @@ function tcrAddRow() {
     valor    : 0,
     tarjeta  : '',
     cuotas   : 1,
-    fecha    : new Date().toISOString().slice(0, 10),
+    fecha    : (function(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })(),
     nota     : '',
     historial: []
   });
