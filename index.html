@@ -1464,8 +1464,10 @@ function renderDashboard() {
   // By category — include tarjetas de crédito as a special slice
   const bycat = {};
   expenses.forEach(e => { bycat[e.category] = (bycat[e.category] || 0) + e.amount; });
-  // Add gastos fijos pagados as _fijos slice
-  if (fijosGastosPagados > 0) bycat['_fijos'] = fijosGastosPagados;
+  // Add gastos fijos pagados into their respective categories
+  fijos.filter(f => paid[f.id]).forEach(f => {
+    bycat[f.category] = (bycat[f.category] || 0) + paidAmount(f, paid);
+  });
   // Add card pago mínimo as a special category in the chart
   if (cardPagoMin > 0) bycat['_tarjetas'] = cardPagoMin;
   const sortedCatsRaw = Object.entries(bycat).sort((a, b) => b[1] - a[1]);
@@ -1493,11 +1495,9 @@ function renderDashboard() {
   } else {
     topCatsEl.innerHTML = topList.map(([catId, amt], idx) => {
       const isCard  = catId === '_tarjetas';
-      const isFijos = catId === '_fijos';
-      const cat     = isCard  ? { name: 'Tarjetas TC',   icon: '💳', color: '#4a90d9' }
-                    : isFijos ? { name: 'Gastos fijos',  icon: '📌', color: '#f5a623' }
+      const cat     = isCard ? { name: 'Tarjetas TC', icon: '💳', color: '#4a90d9' }
                     : (CATEGORIES.find(c => c.id === catId) || { name: catId, icon: '📌', color: '#aaa' });
-      const color   = isCard ? '#4a90d9' : (isFijos ? '#f5a623' : (CAT_COLORS[catId] || '#aaa'));
+      const color   = isCard ? '#4a90d9' : (CAT_COLORS[catId] || '#aaa');
       const pct     = totalSpentWithCards > 0 ? Math.round(amt / totalSpentWithCards * 100) : 0;
       const isFirst = idx === 0;
       return `
@@ -1625,14 +1625,12 @@ function renderDashDonut(sortedCats, total) {
   const labels = chartData.map(([id]) => {
     if (id === '_otros')     return 'Otros';
     if (id === '_tarjetas')  return 'Tarjetas TC';
-    if (id === '_fijos')     return 'Gastos fijos';
     return CATEGORIES.find(c => c.id === id)?.name || id;
   });
   const data   = chartData.map(([, v]) => v);
   const colors = chartData.map(([id]) => {
     if (id === '_otros')    return '#ccc';
     if (id === '_tarjetas') return '#4a90d9';
-    if (id === '_fijos')    return '#f5a623';
     return CAT_COLORS[id] || '#aaa';
   });
 
@@ -1650,11 +1648,10 @@ function renderDashDonut(sortedCats, total) {
   document.getElementById('dashChartLegend').innerHTML = chartData.map(([id, amt]) => {
     const isCard  = id === '_tarjetas';
     const isOther = id === '_otros';
-    const isFijos = id === '_fijos';
-    const cat     = (isCard || isOther || isFijos) ? null : CATEGORIES.find(c => c.id === id);
-    const color   = isOther ? '#ccc' : (isCard ? '#4a90d9' : (isFijos ? '#f5a623' : (CAT_COLORS[id] || '#aaa')));
+    const cat     = (isCard || isOther) ? null : CATEGORIES.find(c => c.id === id);
+    const color   = isOther ? '#ccc' : (isCard ? '#4a90d9' : (CAT_COLORS[id] || '#aaa'));
     const pct     = total > 0 ? Math.round(amt / total * 100) : 0;
-    const label   = isCard ? '💳 Tarjetas TC' : (isOther ? 'Otros' : (isFijos ? '📌 Gastos fijos' : (cat ? cat.icon + ' ' + cat.name : id)));
+    const label   = isCard ? '💳 Tarjetas TC' : (isOther ? 'Otros' : (cat ? cat.icon + ' ' + cat.name : id));
     return `<div class="dcl-item">
       <div class="dcl-dot" style="background:${color}"></div>
       <span class="dcl-name">${label}</span>
@@ -1892,23 +1889,20 @@ function renderDonut(expenses) {
   const bycat = {};
   expenses.forEach(e => { bycat[e.category] = (bycat[e.category] || 0) + e.amount; });
 
-  // Add paid fijos as a special slice
+  // Add paid fijos into their respective categories
   const _fp = getFijosPaid();
-  const fijosPagados = getFijos().filter(f => _fp[f.id]).reduce((s,f) => s + paidAmount(f, _fp), 0);
-  if (fijosPagados > 0) bycat['_fijos'] = fijosPagados;
+  getFijos().filter(f => _fp[f.id]).forEach(f => {
+    bycat[f.category] = (bycat[f.category] || 0) + paidAmount(f, _fp);
+  });
 
   const total = Object.values(bycat).reduce((s,v) => s+v, 0);
   document.getElementById('chartCenterTotal').textContent = fmtCOP(total);
 
   const sortedCats = Object.entries(bycat).sort((a,b) => b[1]-a[1]);
 
-  const labels = sortedCats.map(([id]) =>
-    id === '_fijos' ? 'Gastos fijos' : (CATEGORIES.find(c=>c.id===id)||{name:id}).name
-  );
+  const labels = sortedCats.map(([id]) => (CATEGORIES.find(c=>c.id===id)||{name:id}).name);
   const data   = sortedCats.map(([,v]) => v);
-  const colors = sortedCats.map(([id]) =>
-    id === '_fijos' ? '#f5a623' : ((CATEGORIES.find(c=>c.id===id)||{color:'#aaa'}).color)
-  );
+  const colors = sortedCats.map(([id]) => (CATEGORIES.find(c=>c.id===id)||{color:'#aaa'}).color);
 
   if (donutChart) donutChart.destroy();
   const ctx = document.getElementById('donutChart').getContext('2d');
