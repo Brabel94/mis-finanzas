@@ -1710,37 +1710,76 @@ function renderGastos() {
   // Donut
   renderDonut(expenses);
 
-  // List
+  // List — mix regular expenses and paid fijos by category
   const bycat = {};
   expenses.forEach(e => {
     if (!bycat[e.category]) bycat[e.category] = [];
     bycat[e.category].push(e);
   });
 
+  // Add paid fijos into their respective category buckets
+  const paidGObj2       = getFijosPaid();
+  const fijosPagadosList = getFijos().filter(f => paidGObj2[f.id]);
+  fijosPagadosList.forEach(f => {
+    const catId  = f.category || 'otro';
+    const realAmt = paidAmount(f, paidGObj2);
+    if (!bycat[catId]) bycat[catId] = [];
+    bycat[catId].push({ _fijo: true, id: f.id, note: f.name, fijoNote: f.note, date: null, fijoDay: f.day, amount: realAmt, originalAmount: f.amount, variable: f.variable });
+  });
+
   const list = document.getElementById('expenseList');
-  if (!expenses.length) {
+  if (!expenses.length && !fijosPagadosList.length) {
     list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>No hay gastos este mes.<br>Toca el botón + para agregar uno.</p></div>';
     return;
   }
 
   const cats = Object.entries(bycat).sort((a,b) => b[1].reduce((s,e)=>s+e.amount,0) - a[1].reduce((s,e)=>s+e.amount,0));
   let html = cats.map(([catId, items]) => {
-    const cat = CATEGORIES.find(c => c.id === catId) || {name: catId, icon:'📌', color:'#aaa'};
-    const catTotal = items.reduce((s,e) => s+e.amount,0);
-    const itemsHtml = items.sort((a,b) => new Date(b.date)-new Date(a.date)).map(e =>
-      `<div class="expense-item">
-        <span class="expense-note">${e.note || '—'}</span>
-        <span class="expense-date">${formatDate(e.date)}</span>
-        <span class="expense-amt">${fmtCOP(e.amount)}</span>
-        <button class="expense-del" onclick="deleteExpense('${e.id}')">✕</button>
-      </div>`
-    ).join('');
+    const cat      = CATEGORIES.find(c => c.id === catId) || {name: catId, icon:'📌', color:'#aaa'};
+    const catTotal = items.reduce((s,e) => s+e.amount, 0);
+    const regularCount = items.filter(e => !e._fijo).length;
+    const fijoCount    = items.filter(e => e._fijo).length;
+    const countLabel   = [
+      regularCount ? `${regularCount} gasto${regularCount>1?'s':''}` : '',
+      fijoCount    ? `${fijoCount} fijo${fijoCount>1?'s':''}` : ''
+    ].filter(Boolean).join(' · ');
+
+    const itemsHtml = items
+      .slice()
+      .sort((a,b) => {
+        // fijos sort by day, regular sort by date desc
+        if (a._fijo && b._fijo) return (a.fijoDay||0) - (b.fijoDay||0);
+        if (a._fijo) return 1;
+        if (b._fijo) return -1;
+        return new Date(b.date) - new Date(a.date);
+      })
+      .map(e => {
+        if (e._fijo) {
+          const amtHtml = (e.variable && e.amount !== e.originalAmount)
+            ? `${fmtCOP(e.amount)} <span style="font-size:10px;color:var(--text3);text-decoration:line-through">${fmtCOP(e.originalAmount)}</span>`
+            : fmtCOP(e.amount);
+          return `<div class="expense-item" style="opacity:0.82">
+            <span class="expense-note">${e.note}${e.fijoNote ? ' <em style="color:var(--text3);font-size:11px">· ${e.fijoNote}</em>' : ''} <span style="font-size:10px;background:var(--yellow-light);color:#7a5010;padding:1px 5px;border-radius:8px;font-weight:600">📌</span></span>
+            <span class="expense-date">día ${e.fijoDay}</span>
+            <span class="expense-amt">${amtHtml}</span>
+            <button class="expense-del" title="Ir a Fijos" onclick="openFijosModal()" style="font-size:11px;opacity:0.45;padding:4px 7px">📌</button>
+          </div>`;
+        }
+        return `<div class="expense-item">
+          <span class="expense-note">${e.note || '—'}</span>
+          <span class="expense-date">${formatDate(e.date)}</span>
+          <span class="expense-amt">${fmtCOP(e.amount)}</span>
+          <button class="expense-edit" onclick="EM.openEdit('${e.id}')" title="Editar" style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:13px;color:var(--text3);opacity:0.7">✏️</button>
+          <button class="expense-del" onclick="deleteExpense('${e.id}')">✕</button>
+        </div>`;
+      }).join('');
+
     return `<div class="category-group" style="border-left:3px solid ${cat.color}">
       <div class="cat-header" onclick="toggleCat(this)">
         <div class="cat-icon" style="background:${cat.color}22">${cat.icon}</div>
         <div class="cat-info">
           <div class="cat-name">${cat.name}</div>
-          <div class="cat-count">${items.length} gasto${items.length>1?'s':''}</div>
+          <div class="cat-count">${countLabel}</div>
         </div>
         <div class="cat-amount">${fmtCOP(catTotal)}</div>
         <div class="cat-chevron">▼</div>
@@ -1748,41 +1787,6 @@ function renderGastos() {
       <div class="cat-items" style="display:none">${itemsHtml}</div>
     </div>`;
   }).join('');
-
-  // Append paid fijos as informational section (no delete button, just info)
-  const fijosPagadosList = getFijos().filter(f => getFijosPaid()[f.id]);
-  if (fijosPagadosList.length) {
-    const paidGObj2 = getFijosPaid();
-    const fijoTotal = fijosPagadosList.reduce((s,f) => s + paidAmount(f, paidGObj2), 0);
-    const fijoItems = fijosPagadosList.map(f => {
-      const cat      = CATEGORIES.find(c => c.id === f.category) || { icon:'📌' };
-      const realAmt  = paidAmount(f, paidGObj2);
-      const amtHtml  = (f.variable && realAmt !== f.amount)
-        ? `${fmtCOP(realAmt)} <span style="font-size:10px;color:var(--text3);text-decoration:line-through">${fmtCOP(f.amount)}</span>`
-        : fmtCOP(realAmt);
-      return `<div class="expense-item" style="opacity:0.75">
-        <span class="expense-note" style="display:flex;align-items:center;gap:6px">
-          <span style="font-size:13px">${cat.icon}</span>
-          ${f.name}${f.note ? ' · <em style="color:var(--text3)">' + f.note + '</em>' : ''}
-        </span>
-        <span class="expense-date">día ${f.day}</span>
-        <span class="expense-amt">${amtHtml}</span>
-        <button class="expense-del" title="Gestionar en Fijos" onclick="openFijosModal()" style="font-size:12px;opacity:0.5">📌</button>
-      </div>`;
-    }).join('');
-    html += `<div class="category-group" style="opacity:0.85;border:1px dashed var(--border)">
-      <div class="cat-header" onclick="toggleCat(this)">
-        <div class="cat-icon" style="background:#f5a62322">📌</div>
-        <div class="cat-info">
-          <div class="cat-name">Gastos fijos pagados</div>
-          <div class="cat-count" style="color:var(--text3)">Solo informativo · ${fijosPagadosList.length} fijo${fijosPagadosList.length>1?'s':''}</div>
-        </div>
-        <div class="cat-amount" style="color:#f5a623">${fmtCOP(fijoTotal)}</div>
-        <div class="cat-chevron">▼</div>
-      </div>
-      <div class="cat-items" style="display:none">${fijoItems}</div>
-    </div>`;
-  }
 
   list.innerHTML = html;
 
@@ -1946,8 +1950,30 @@ const EM = {
   method    : 'cash',   // 'cash' | 'card'
   cardName  : '',
   category  : '',
+  editId    : null,
+
+  openEdit(id) {
+    const expense = getExpenses().find(e => e.id === id);
+    if (!expense) return;
+    this.editId = id;
+    this.open(false);
+    // Pre-fill amount
+    this.amountStr = String(expense.amount);
+    const num     = expense.amount;
+    const intPart = Math.floor(num).toLocaleString('es-CO').replace(/,/g,'.');
+    document.getElementById('entryAmountValue').textContent = intPart;
+    // Pre-fill fields
+    document.getElementById('entryNote').value  = expense.note || '';
+    document.getElementById('entryDate').value  = expense.date || '';
+    this.selectCat(expense.category || CATEGORIES[0]?.id || 'otro');
+    // Mark save button as edit
+    const btn = document.getElementById('entrySaveBtn');
+    btn.textContent = '✏️ Guardar cambios';
+    btn.style.background = 'var(--blue)';
+  },
 
   open(isIncome) {
+    this.editId    = null;
     this.amountStr = '0';
     this.isIncome  = isIncome;
     this.method    = 'cash';
@@ -2096,6 +2122,20 @@ const EM = {
     const note = document.getElementById('entryNote').value.trim();
     const date = document.getElementById('entryDate').value;
 
+    // Edit mode: update existing expense in place
+    if (this.editId) {
+      const expArr = getExpenses();
+      const idx    = expArr.findIndex(e => e.id === this.editId);
+      if (idx >= 0) {
+        expArr[idx] = { ...expArr[idx], category: this.category, amount, note, date };
+        saveExpenses(expArr);
+      }
+      this.close();
+      renderGastos(); renderDashboard();
+      showToast('✅ Gasto actualizado');
+      return;
+    }
+
     // Guardar en el mes que corresponde a la fecha ingresada
     const dp   = (date && date.length >= 7) ? date.split('-') : null;
     const tKey = dp ? (dp[0] + '-' + dp[1]) : monthKey();
@@ -2151,6 +2191,7 @@ const EM = {
   close() {
     document.getElementById('entryModal').classList.remove('show');
     this.amountStr = '0';
+    this.editId    = null;
   }
 };
 
