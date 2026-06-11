@@ -62,12 +62,11 @@
   .tab-ico { font-size: 14px; line-height: 1; }
   /* Navegación inferior en móvil (tabs al alcance del pulgar) */
   @media (max-width: 599px) {
-    .tabs { position: fixed; top: auto; bottom: 0; left: 0; right: 0; border-bottom: none; border-top: 1px solid var(--border); box-shadow: 0 -2px 12px rgba(0,0,0,0.1); }
+    .tabs { position: fixed; top: auto; bottom: 0; left: 0; right: 0; border-bottom: none; border-top: 1px solid var(--border); box-shadow: 0 -2px 12px rgba(0,0,0,0.1); padding-bottom: env(safe-area-inset-bottom); }
     .tab { flex-direction: column; gap: 3px; padding: 8px 4px 10px; font-size: 11px; border-bottom: none; border-top: 2px solid transparent; }
     .tab.active { border-bottom: none; border-top-color: var(--green); }
     .tab-ico { font-size: 19px; }
     .main { padding-bottom: 100px; }
-    .fab-group { bottom: 84px; }
   }
 
   /* MAIN */
@@ -265,6 +264,10 @@
   .fab-expense { display: flex; align-items: center; gap: 6px; background: var(--red-dark); color: white; border: none; padding: 14px 22px; border-radius: 28px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; box-shadow: 0 4px 20px rgba(163,45,45,0.45); transition: transform 0.15s; }
   .fab-expense:hover { transform: scale(1.05); }
   .fab-plus { font-size: 17px; font-weight: 500; line-height: 1; }
+  /* En móvil la nav vive abajo: los FAB suben para no taparla (debe ir DESPUÉS de la regla base) */
+  @media (max-width: 599px) {
+    .fab-group { bottom: calc(84px + env(safe-area-inset-bottom)); }
+  }
 
   /* ── TARJETAS HEADER ─────────────────────────────────── */
   .tcard-btn-primary { background: var(--green-btn); color: white; border: none; border-radius: var(--radius-sm); padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
