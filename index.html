@@ -1448,7 +1448,37 @@ let dashDonutChart = null;
 function paidAmount(f, paidObj) {
   const v = paidObj[f.id];
   if (!v) return 0;
-  return typeof v === 'number' ? v : f.amount;
+  if (typeof v === 'object') return v.amount;   // foto (formato actual)
+  return typeof v === 'number' ? v : f.amount;  // legado: número (variable) o true
+}
+
+// "Foto" del fijo al marcarlo como pagado/recibido: congela monto, nombre y categoría
+// para que editar o eliminar la definición NO reescriba los meses ya registrados.
+function fijoSnapshot(f, amount) {
+  return { amount: amount, name: f.name, day: f.day, note: f.note || '', category: f.category || 'otro', variable: !!f.variable };
+}
+
+// Entradas pagadas/recibidas del mes: combina definiciones actuales con fotos huérfanas
+// (fijos eliminados después de marcarse). Soporta el formato legado (true / número).
+function getPaidFijoEntries(defs, paidObj) {
+  return Object.keys(paidObj).map(id => {
+    const v = paidObj[id];
+    if (!v) return null;
+    const def  = defs.find(f => f.id === id);
+    const snap = typeof v === 'object' ? v : null;
+    if (!def && !snap) return null; // marca legada huérfana sin foto: no hay datos para mostrar
+    return {
+      id      : id,
+      name    : snap ? snap.name     : def.name,
+      amount  : snap ? snap.amount   : (typeof v === 'number' ? v : def.amount),
+      day     : snap ? snap.day      : def.day,
+      note    : snap ? snap.note     : (def.note || ''),
+      category: snap ? snap.category : (def.category || 'otro'),
+      variable: snap ? snap.variable : !!def.variable,
+      estimate: def  ? def.amount    : (snap ? snap.amount : 0),
+      deleted : !def,
+    };
+  }).filter(Boolean);
 }
 
 function renderDashboard() {
@@ -1475,13 +1505,14 @@ function renderDashboard() {
     }
   });
 
-  // Fijos — only PAID/RECEIVED ones affect the balance
-  const fijosGastosPagados   = fijos.filter(f =>  paid[f.id]).reduce((s,f) => s + paidAmount(f, paid), 0);
+  // Fijos — only PAID/RECEIVED ones affect the balance (vía fotos: sobreviven a ediciones/borrados)
+  const gastosPagadosEntries = getPaidFijoEntries(fijos, paid);
+  const fijosGastosPagados   = gastosPagadosEntries.reduce((s,e) => s + e.amount, 0);
   const fijosGastosPendientes= fijos.filter(f => !paid[f.id]).reduce((s,f) => s+f.amount, 0);
 
   const ingresosFijos    = getIngresosFijos();
   const paidI            = getIngresosPaid();
-  const ingresosFijosRecibidos  = ingresosFijos.filter(f =>  paidI[f.id]).reduce((s,f) => s+f.amount, 0);
+  const ingresosFijosRecibidos  = getPaidFijoEntries(ingresosFijos, paidI).reduce((s,e) => s+e.amount, 0);
   const ingresosFijosPendientes = ingresosFijos.filter(f => !paidI[f.id]).reduce((s,f) => s+f.amount, 0);
 
   // Total income = manual income + ingresos fijos YA RECIBIDOS
@@ -1556,8 +1587,8 @@ function renderDashboard() {
   const bycat = {};
   expenses.forEach(e => { bycat[e.category] = (bycat[e.category] || 0) + e.amount; });
   // Add gastos fijos pagados into their respective categories
-  fijos.filter(f => paid[f.id]).forEach(f => {
-    bycat[f.category] = (bycat[f.category] || 0) + paidAmount(f, paid);
+  gastosPagadosEntries.forEach(e => {
+    bycat[e.category] = (bycat[e.category] || 0) + e.amount;
   });
   // Add card pago mínimo as a special category in the chart
   if (cardPagoMin > 0) bycat['_tarjetas'] = cardPagoMin;
@@ -1768,10 +1799,10 @@ function renderGastos() {
   const income   = getIncome();
   const total    = expenses.reduce((s, e) => s + e.amount, 0);
 
-  // Only PAID fijos affect the balance
+  // Only PAID fijos affect the balance (vía fotos)
   const paidGObj = getFijosPaid();
-  const fijosGastosPagados      = getFijos().filter(f => paidGObj[f.id]).reduce((s,f) => s + paidAmount(f, paidGObj), 0);
-  const ingresosFijosRecibidos  = getIngresosFijos().filter(f => getIngresosPaid()[f.id]).reduce((s,f)=>s+f.amount,0);
+  const fijosGastosPagados      = getPaidFijoEntries(getFijos(), paidGObj).reduce((s,e) => s + e.amount, 0);
+  const ingresosFijosRecibidos  = getPaidFijoEntries(getIngresosFijos(), getIngresosPaid()).reduce((s,e) => s+e.amount, 0);
   const totalIncome = income + ingresosFijosRecibidos;
 
   // Card pagoMin
@@ -1805,14 +1836,12 @@ function renderGastos() {
     bycat[e.category].push(e);
   });
 
-  // Add paid fijos into their respective category buckets
-  const paidGObj2       = getFijosPaid();
-  const fijosPagadosList = getFijos().filter(f => paidGObj2[f.id]);
-  fijosPagadosList.forEach(f => {
-    const catId  = f.category || 'otro';
-    const realAmt = paidAmount(f, paidGObj2);
+  // Add paid fijos into their respective category buckets (fotos: incluye fijos ya eliminados)
+  const fijosPagadosList = getPaidFijoEntries(getFijos(), getFijosPaid());
+  fijosPagadosList.forEach(e => {
+    const catId = e.category || 'otro';
     if (!bycat[catId]) bycat[catId] = [];
-    bycat[catId].push({ _fijo: true, id: f.id, note: f.name, fijoNote: f.note, date: null, fijoDay: f.day, amount: realAmt, originalAmount: f.amount, variable: f.variable });
+    bycat[catId].push({ _fijo: true, id: e.id, note: e.name + (e.deleted ? ' (eliminado)' : ''), fijoNote: e.note, date: null, fijoDay: e.day, amount: e.amount, originalAmount: e.estimate, variable: e.variable });
   });
 
   const list = document.getElementById('expenseList');
@@ -1886,7 +1915,7 @@ function renderIncomeList() {
   const incomes        = getIncomeList();
   const ingresosFijos  = getIngresosFijos();
   const paidI          = getIngresosPaid();
-  const fijosPagados   = ingresosFijos.filter(f => !!paidI[f.id]);
+  const fijosPagados   = getPaidFijoEntries(ingresosFijos, paidI);
 
   const manualTotal    = incomes.reduce((s, e) => s + e.amount, 0);
   const fijosTotal     = fijosPagados.reduce((s, f) => s + f.amount, 0);
@@ -1946,7 +1975,7 @@ function renderIncomeList() {
       fijosPagados.map(f =>
         '<div class="expense-item" style="opacity:0.8">' +
           '<span class="expense-note" style="display:flex;align-items:center;gap:6px">' +
-            '<span>💰</span>' + f.name + (f.note ? ' · <em style="color:var(--text3)">' + f.note + '</em>' : '') +
+            '<span>💰</span>' + f.name + (f.deleted ? ' <span style="font-size:11px;color:var(--text3)">(eliminado)</span>' : '') + (f.note ? ' · <em style="color:var(--text3)">' + f.note + '</em>' : '') +
           '</span>' +
           '<span class="expense-date">día ' + f.day + '</span>' +
           '<span class="expense-amt" style="color:var(--green-dark)">+ ' + fmtCOP(f.amount) + '</span>' +
@@ -3213,6 +3242,7 @@ function setFijoTipo(tipo) {
 }
 
 function openFijoModal(type) {
+  editingFijoId   = null;
   currentFijoType = type || 'gasto';
   currentFijoTipo = 'fijo';
   const isGasto = currentFijoType === 'gasto';
@@ -3242,6 +3272,26 @@ function openFijoModal(type) {
   document.getElementById('fijoModal').classList.add('show');
 }
 
+// ── Editar fijo: solo cambia la definición; las fotos de meses ya marcados quedan intactas ──
+let editingFijoId = null;
+function openFijoEditModal(id, type) {
+  const list = type === 'ingreso' ? getIngresosFijos() : getFijos();
+  const f = list.find(x => x.id === id);
+  if (!f) return;
+  openFijoModal(type);
+  editingFijoId = id;
+  document.getElementById('fijoModalTitle').textContent = type === 'gasto' ? 'Editar gasto fijo' : 'Editar ingreso fijo';
+  document.getElementById('fijoSaveBtn').textContent    = 'Guardar cambios';
+  document.getElementById('fijo-name').value   = f.name;
+  document.getElementById('fijo-amount').value = f.amount;
+  document.getElementById('fijo-day').value    = f.day;
+  document.getElementById('fijo-note').value   = f.note || '';
+  if (type === 'gasto') {
+    setFijoTipo(f.variable ? 'variable' : 'fijo');
+    selectFijoCategory(f.category || 'otro');
+  }
+}
+
 let selectedFijoCategory = 'otro';
 function selectFijoCategory(id) {
   selectedFijoCategory = id;
@@ -3256,8 +3306,7 @@ function saveFijo() {
   if (!name)       { showToast('⚠️ Ingresa un nombre'); document.getElementById('fijo-name').focus(); return; }
   if (amount <= 0) { showToast('⚠️ Ingresa un monto mayor a 0'); document.getElementById('fijo-amount').focus(); return; }
 
-  const item = {
-    id      : Date.now().toString(),
+  const data = {
     name, amount,
     day     : parseInt(document.getElementById('fijo-day').value) || 1,
     note    : document.getElementById('fijo-note').value.trim(),
@@ -3266,10 +3315,24 @@ function saveFijo() {
     variable: currentFijoType === 'gasto' && currentFijoTipo === 'variable',
   };
 
-  if (currentFijoType === 'gasto') {
-    const arr = getFijos(); arr.push(item); saveFijos(arr);
+  if (editingFijoId) {
+    // Edición: la definición cambia, las fotos de meses ya marcados no
+    const isGasto = currentFijoType === 'gasto';
+    const arr = isGasto ? getFijos() : getIngresosFijos();
+    const idx = arr.findIndex(f => f.id === editingFijoId);
+    if (idx !== -1) {
+      arr[idx] = { ...arr[idx], ...data };
+      if (isGasto) saveFijos(arr); else saveIngresosFijos(arr);
+    }
+    editingFijoId = null;
+    showToast('Fijo actualizado · los meses ya marcados no cambian');
   } else {
-    const arr = getIngresosFijos(); arr.push(item); saveIngresosFijos(arr);
+    const item = { id: Date.now().toString(), ...data };
+    if (currentFijoType === 'gasto') {
+      const arr = getFijos(); arr.push(item); saveFijos(arr);
+    } else {
+      const arr = getIngresosFijos(); arr.push(item); saveIngresosFijos(arr);
+    }
   }
 
   closeModal('fijoModal');
@@ -3281,7 +3344,13 @@ function saveFijo() {
 function toggleFijoPaid(id, type) {
   if (type === 'ingreso') {
     const paid = getIngresosPaid();
-    paid[id] = paid[id] ? false : true;
+    if (paid[id]) {
+      paid[id] = false;
+    } else {
+      const fijo = getIngresosFijos().find(f => f.id === id);
+      if (!fijo) return; // huérfano: no se puede re-marcar sin definición
+      paid[id] = fijoSnapshot(fijo, fijo.amount);
+    }
     saveIngresosPaid(paid);
   } else {
     const paid  = getFijosPaid();
@@ -3289,7 +3358,8 @@ function toggleFijoPaid(id, type) {
 
     if (isNowPaid) {
       const fijo = getFijos().find(function(f){ return f.id === id; });
-      if (fijo && fijo.variable) {
+      if (!fijo) return; // huérfano: no se puede re-marcar sin definición
+      if (fijo.variable) {
         // Show nice modal instead of prompt()
         document.getElementById('varAmtTitle').textContent = '📊 ' + fijo.name;
         document.getElementById('varAmtSub').textContent   = 'Estimado: ' + fmtCOP(fijo.amount);
@@ -3299,13 +3369,13 @@ function toggleFijoPaid(id, type) {
         setTimeout(function(){ inp.select(); }, 100);
         window._varAmtCallback = function(realAmt) {
           const p2 = getFijosPaid();
-          p2[id] = realAmt;
+          p2[id] = fijoSnapshot(fijo, realAmt);
           saveFijosPaid(p2);
           renderFijos(); renderDashboard(); renderGastos();
         };
         return; // rest handled by _varAmtConfirm
       } else {
-        paid[id] = fijo ? fijo.amount : true;
+        paid[id] = fijoSnapshot(fijo, fijo.amount);
       }
     } else {
       paid[id] = false;
@@ -3318,30 +3388,25 @@ function toggleFijoPaid(id, type) {
 }
 
 function deleteFijo(id, type) {
-  let item, paidCopy;
+  // Solo se elimina la definición: las fotos de los meses ya marcados (incluido este) se conservan
+  let item;
   if (type === 'ingreso') {
     const list = getIngresosFijos();
     item = list.find(f => f.id === id);
     if (!item) return;
     saveIngresosFijos(list.filter(f => f.id !== id));
-    paidCopy = getIngresosPaid();
-    const paid = {...paidCopy}; delete paid[id]; saveIngresosPaid(paid);
   } else {
     const list = getFijos();
     item = list.find(f => f.id === id);
     if (!item) return;
     saveFijos(list.filter(f => f.id !== id));
-    paidCopy = getFijosPaid();
-    const paid = {...paidCopy}; delete paid[id]; saveFijosPaid(paid);
   }
   renderFijos(); renderDashboard(); renderGastos();
-  showUndoToast('Fijo eliminado', () => {
+  showUndoToast('Fijo eliminado · el historial se conserva', () => {
     if (type === 'ingreso') {
       saveIngresosFijos([...getIngresosFijos(), item]);
-      saveIngresosPaid(paidCopy);
     } else {
       saveFijos([...getFijos(), item]);
-      saveFijosPaid(paidCopy);
     }
     renderFijos(); renderDashboard(); renderGastos();
   });
@@ -3355,13 +3420,15 @@ function renderFijos() {
   const today    = new Date();
   const isCurrentMonth = today.getFullYear() === currentYear && today.getMonth() === currentMonth;
 
-  // KPIs
+  // KPIs (pagados vía fotos: incluyen fijos eliminados después de marcarse)
+  const gastosEntries      = getPaidFijoEntries(gastos, paidG);
+  const ingresosEntries    = getPaidFijoEntries(ingresos, paidI);
   const gastosTotal        = gastos.reduce((s,f) => s+f.amount, 0);
-  const gastosPagado       = gastos.filter(f=>paidG[f.id]).reduce((s,f) => s + paidAmount(f, paidG), 0);
+  const gastosPagado       = gastosEntries.reduce((s,e) => s + e.amount, 0);
   const gastosPendiente    = gastos.filter(f=>!paidG[f.id]).reduce((s,f) => s + f.amount, 0);
   const ingresosTotal      = ingresos.reduce((s,f) => s+f.amount, 0);
-  const ingresosPagado     = ingresos.filter(f=>paidI[f.id]).reduce((s,f)=>s+f.amount, 0);
-  const ingresosPendiente  = ingresosTotal - ingresosPagado;
+  const ingresosPagado     = ingresosEntries.reduce((s,e) => s+e.amount, 0);
+  const ingresosPendiente  = ingresos.filter(f=>!paidI[f.id]).reduce((s,f) => s + f.amount, 0);
   const balanceNeto        = ingresosTotal - gastosTotal;
 
   const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -3395,35 +3462,48 @@ function renderFijos() {
     btnBadge.textContent   = pending + ' pendiente' + (pending !== 1 ? 's' : '');
   }
 
-  // Gastos fijos list
+  // Gastos fijos list (definiciones + fotos huérfanas de fijos eliminados este mes)
   const gastosList = document.getElementById('fijos-gastos-list');
   if (gastosList) {
-    if (!gastos.length) {
-      gastosList.innerHTML = '<div style="padding:12px 0;text-align:center;color:var(--text3);font-size:13px">Sin gastos fijos registrados.</div>';
-    } else {
-      gastosList.innerHTML = [...gastos].sort((a,b) => a.day - b.day).map(f => {
-        const isPaid  = !!paidG[f.id];
-        const cat     = CATEGORIES.find(c => c.id === f.category) || { icon: '📌' };
-        const color   = CAT_COLORS[f.category] || '#e05c5c';
-        const overdue = isCurrentMonth && f.day < today.getDate() && !isPaid;
-        return fijoItemHTML(f, isPaid, cat, color, overdue, 'gasto', paidG);
-      }).join('');
-    }
+    const defsHtml = [...gastos].sort((a,b) => a.day - b.day).map(f => {
+      const isPaid  = !!paidG[f.id];
+      const cat     = CATEGORIES.find(c => c.id === f.category) || { icon: '📌' };
+      const color   = CAT_COLORS[f.category] || '#e05c5c';
+      const overdue = isCurrentMonth && f.day < today.getDate() && !isPaid;
+      return fijoItemHTML(f, isPaid, cat, color, overdue, 'gasto', paidG);
+    }).join('');
+    const orphansHtml = gastosEntries.filter(e => e.deleted).map(e => orphanFijoHTML(e, 'gasto')).join('');
+    gastosList.innerHTML = (defsHtml + orphansHtml) ||
+      '<div style="padding:12px 0;text-align:center;color:var(--text3);font-size:13px">Sin gastos fijos registrados.</div>';
   }
 
   // Ingresos fijos list
   const ingresosList = document.getElementById('fijos-ingresos-list');
   if (ingresosList) {
-    if (!ingresos.length) {
-      ingresosList.innerHTML = '<div style="padding:12px 0;text-align:center;color:var(--text3);font-size:13px">Sin ingresos fijos registrados.</div>';
-    } else {
-      ingresosList.innerHTML = [...ingresos].sort((a,b) => a.day - b.day).map(f => {
-        const isPaid  = !!paidI[f.id];
-        const overdue = isCurrentMonth && f.day < today.getDate() && !isPaid;
-        return fijoItemHTML(f, isPaid, { icon: '💰' }, '#4caf82', overdue, 'ingreso', paidI);
-      }).join('');
-    }
+    const defsHtml = [...ingresos].sort((a,b) => a.day - b.day).map(f => {
+      const isPaid  = !!paidI[f.id];
+      const overdue = isCurrentMonth && f.day < today.getDate() && !isPaid;
+      return fijoItemHTML(f, isPaid, { icon: '💰' }, '#4caf82', overdue, 'ingreso', paidI);
+    }).join('');
+    const orphansHtml = ingresosEntries.filter(e => e.deleted).map(e => orphanFijoHTML(e, 'ingreso')).join('');
+    ingresosList.innerHTML = (defsHtml + orphansHtml) ||
+      '<div style="padding:12px 0;text-align:center;color:var(--text3);font-size:13px">Sin ingresos fijos registrados.</div>';
   }
+}
+
+// Fila de un fijo eliminado pero pagado/recibido este mes: solo lectura, se puede desmarcar
+function orphanFijoHTML(e, type) {
+  const isIngreso = type === 'ingreso';
+  return '<div class="fijo-item paid">' +
+    '<button class="fijo-check checked" style="background:var(--green);border-color:var(--green)"' +
+    ' onclick="toggleFijoPaid(\'' + e.id + '\',\'' + type + '\')" title="Quitar de este mes (no se puede volver a marcar)">✓</button>' +
+    '<div class="fijo-icon" style="background:var(--bg)">' + (isIngreso ? '💰' : '📌') + '</div>' +
+    '<div class="fijo-info">' +
+      '<div class="fijo-name paid-text">' + e.name + ' <span style="font-size:11px;background:var(--bg);color:var(--text3);padding:1px 7px;border-radius:10px">eliminado</span></div>' +
+      '<div class="fijo-meta">Día ' + e.day + (e.note ? ' · ' + e.note : '') + '</div>' +
+    '</div>' +
+    '<div class="fijo-right"><div class="fijo-amt paid-text">' + (isIngreso ? '+ ' : '') + fmtCOP(e.amount) + '</div></div>' +
+  '</div>';
 }
 
 function openFijosModal() {
@@ -3468,7 +3548,10 @@ function fijoItemHTML(f, isPaid, cat, color, overdue, type, paidObj) {
     '</div>' +
     '<div class="fijo-right">' +
       '<div class="fijo-amt ' + (isPaid ? 'paid-text' : '') + '" style="' + amtColor + '">' + amtDisplay + '</div>' +
-      '<button class="fijo-del" onclick="deleteFijo(\'' + f.id + '\',\'' + type + '\')" title="Eliminar">✕</button>' +
+      '<div style="display:flex;gap:0">' +
+        '<button class="fijo-del" onclick="openFijoEditModal(\'' + f.id + '\',\'' + type + '\')" title="Editar">✏️</button>' +
+        '<button class="fijo-del" onclick="deleteFijo(\'' + f.id + '\',\'' + type + '\')" title="Eliminar">✕</button>' +
+      '</div>' +
     '</div>' +
   '</div>';
 }
