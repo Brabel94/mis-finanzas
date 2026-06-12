@@ -75,11 +75,15 @@
     .tab { flex-direction: column; gap: 3px; padding: 8px 4px 10px; font-size: 11px; border-bottom: none; border-top: 2px solid transparent; }
     .tab.active { border-bottom: none; border-top-color: var(--green); }
     .tab-ico { font-size: 19px; }
-    .main { padding-bottom: 100px; }
   }
 
   /* MAIN */
   .main { padding: 20px; max-width: 900px; margin: 0 auto; }
+  /* Espacio para la nav inferior fija en móvil (debe ir DESPUÉS de la regla base:
+     el shorthand "padding" de arriba resetearía un padding-bottom declarado antes) */
+  @media (max-width: 599px) {
+    .main { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+  }
 
   /* BALANCE HEADER */
   .balance-header { background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); text-align: center; }
