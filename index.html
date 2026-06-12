@@ -31,11 +31,20 @@
     --border: #e0ece5;
     --radius: 16px;
     --radius-sm: 10px;
-    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+    --shadow: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-hover: 0 4px 14px rgba(0,0,0,0.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
   :focus-visible { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+
+  /* ── ICONOS DE LÍNEA (sprite SVG, heredan currentColor) ── */
+  .ic { width: 1em; height: 1em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.125em; flex-shrink: 0; }
+
+  /* ── TARJETAS MODERNAS: borde sutil + sombra mínima + micro-elevación ── */
+  .balance-header, .chart-card, .category-group, .dash-kpi, .dash-section, .card-item, .reg-card-item, .card-purchase-item, .cat-manage-card, .config-acc { border: 1px solid var(--border); }
+  .dash-kpi, .category-group, .cat-manage-card, .card-purchase-item, .reg-card-item { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .dash-kpi:hover, .category-group:hover, .cat-manage-card:hover, .card-purchase-item:hover, .reg-card-item:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); }
 
   /* TOP BAR */
   .topbar { background: var(--green-btn); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; }
@@ -163,9 +172,12 @@
   .empty-icon { font-size: 48px; margin-bottom: 12px; }
   .empty p { font-size: 14px; }
 
-  /* FIREBASE STATUS */
-  .firebase-bar { background: var(--yellow-light); border: 1px solid var(--warn-border); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: var(--warn-text); display: none; align-items: center; gap: 8px; }
-  .firebase-bar.show { display: flex; }
+  /* FIREBASE STATUS — chip compacto y descartable */
+  .firebase-bar { background: var(--yellow-light); border: 1px solid var(--warn-border); border-radius: 20px; padding: 5px 12px; margin-bottom: 14px; font-size: 12px; color: var(--warn-text); display: none; align-items: center; gap: 7px; width: fit-content; }
+  .firebase-bar.show { display: inline-flex; }
+  .firebase-bar a { color: inherit; font-weight: 600; }
+  .fb-close { background: none; border: none; color: inherit; opacity: 0.55; cursor: pointer; font-size: 13px; padding: 2px 4px; line-height: 1; }
+  .fb-close:hover { opacity: 1; }
 
   /* STEP INDICATORS */
   /* ── DASHBOARD ────────────────────────────────────────── */
@@ -188,7 +200,7 @@
 
   .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   .dash-kpi { background: var(--card); border-radius: var(--radius-sm); padding: 16px; box-shadow: var(--shadow); }
-  .dash-kpi .dk-icon { font-size: 22px; margin-bottom: 8px; }
+  .dash-kpi .dk-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; margin-bottom: 8px; }
   .dash-kpi .dk-val { font-size: 18px; font-weight: 600; font-family: 'DM Mono', monospace; margin-bottom: 3px; }
   .dash-kpi .dk-label { font-size: 11px; color: var(--text2); }
   .dash-kpi .dk-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
@@ -412,7 +424,8 @@
     --warn-border: #5a4a10;
     --warn-text: #c8a830;
     --blue-light: #111e2a;
-    --shadow: 0 2px 14px rgba(0,0,0,0.45);
+    --shadow: 0 1px 4px rgba(0,0,0,0.35);
+    --shadow-hover: 0 4px 16px rgba(0,0,0,0.5);
   }
   [data-theme="dark"] .modal-overlay { background: rgba(0,0,0,0.65); }
   [data-theme="dark"] .field input,
@@ -434,6 +447,38 @@
 </style>
 </head>
 <body>
+
+<!-- ===== SPRITE DE ICONOS (línea, heredan currentColor — sin dependencias) ===== -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+  <symbol id="i-banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-donut" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M16 13H8M16 17H8M10 9H8"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 22a10 10 0 1 1 10-10c0 1.66-1.34 3-3 3h-2a2 2 0 0 0-2 2c0 .5.2 1 .54 1.36.34.43.46.9.46 1.14 0 .83-.67 1.5-1.5 1.5z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/><circle cx="17.5" cy="11.5" r="1"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M12 2H2v10l9.29 9.29a1 1 0 0 0 1.42 0l8.58-8.58a1 1 0 0 0 0-1.42z"/><circle cx="7" cy="7" r="1"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z"/></symbol>
+  <symbol id="i-cloud-off" viewBox="0 0 24 24"><path d="M5.78 5.78A7 7 0 0 0 9 19h8.5c.46 0 .9-.07 1.31-.19"/><path d="M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07"/><path d="M2 2l20 20"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+</svg>
 
 <!-- ===== PANTALLA DE CARGA (mientras Firebase verifica sesión) ===== -->
 <div id="loadingScreen" style="position:fixed;inset:0;background:var(--green-btn);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.3s ease">
@@ -537,10 +582,10 @@
 
 <!-- TABS -->
 <div class="tabs" role="tablist" aria-label="Secciones de la app">
-  <button class="tab active" role="tab" aria-selected="true" onclick="showTab('dashboard')"><span class="tab-ico">🏠</span><span>Resumen</span></button>
-  <button class="tab" role="tab" aria-selected="false" onclick="showTab('gastos')"><span class="tab-ico">💸</span><span>Gastos</span></button>
-  <button class="tab" role="tab" aria-selected="false" onclick="showTab('tarjetas')"><span class="tab-ico">💳</span><span>Tarjetas</span></button>
-  <button class="tab" role="tab" aria-selected="false" onclick="showTab('config')"><span class="tab-ico">⚙️</span><span>Config</span></button>
+  <button class="tab active" role="tab" aria-selected="true" onclick="showTab('dashboard')"><span class="tab-ico"><svg class="ic"><use href="#i-home"/></svg></span><span>Resumen</span></button>
+  <button class="tab" role="tab" aria-selected="false" onclick="showTab('gastos')"><span class="tab-ico"><svg class="ic"><use href="#i-banknote"/></svg></span><span>Gastos</span></button>
+  <button class="tab" role="tab" aria-selected="false" onclick="showTab('tarjetas')"><span class="tab-ico"><svg class="ic"><use href="#i-card"/></svg></span><span>Tarjetas</span></button>
+  <button class="tab" role="tab" aria-selected="false" onclick="showTab('config')"><span class="tab-ico"><svg class="ic"><use href="#i-settings"/></svg></span><span>Config</span></button>
 </div>
 
 <!-- MAIN -->
@@ -548,7 +593,9 @@
 
   <!-- FIREBASE WARNING -->
   <div class="firebase-bar show" id="firebaseBar">
-    ⚠️ Modo local activo. Configura Firebase en la pestaña <strong>⚙️ Config</strong> para sincronizar con tu celular.
+    <svg class="ic"><use href="#i-cloud-off"/></svg>
+    <span>Modo local · <a href="#" onclick="showTab('config');return false">configurar sincronización</a></span>
+    <button class="fb-close" onclick="dismissLocalBar()" aria-label="Ocultar aviso">✕</button>
   </div>
 
   <!-- ===== DASHBOARD TAB ===== -->
@@ -570,7 +617,7 @@
           <div class="ds-val" id="dash-income">$ 0</div>
         </div>
         <div class="dash-stat" id="dash-pill-tc" style="display:none">
-          <div class="ds-label">💳 TC mín</div>
+          <div class="ds-label"><svg class="ic"><use href="#i-card"/></svg> TC mín</div>
           <div class="ds-val" id="dash-tc-min">$ 0</div>
         </div>
       </div>
@@ -593,25 +640,25 @@
     <!-- KPIs -->
     <div class="dash-grid">
       <div class="dash-kpi">
-        <div class="dk-icon">📊</div>
+        <div class="dk-icon" style="background:var(--blue-light);color:var(--blue-btn)"><svg class="ic"><use href="#i-bars"/></svg></div>
         <div class="dk-val" id="dash-num-expenses" style="color:var(--text)">0</div>
         <div class="dk-label">Movimientos</div>
         <div class="dk-sub" id="dash-avg-expense">Promedio $ 0</div>
       </div>
       <div class="dash-kpi">
-        <div class="dk-icon">📌</div>
+        <div class="dk-icon" style="background:var(--red-light);color:var(--red)"><svg class="ic"><use href="#i-pin"/></svg></div>
         <div class="dk-val" id="dash-fijos-pending-count" style="color:var(--red)">0</div>
         <div class="dk-label">Fijos pendientes</div>
         <div class="dk-sub" id="dash-fijos-pending-amt">$ 0 por pagar</div>
       </div>
       <div class="dash-kpi">
-        <div class="dk-icon">🏆</div>
+        <div class="dk-icon" style="background:var(--yellow-light);color:var(--warn-text)"><svg class="ic"><use href="#i-trophy"/></svg></div>
         <div class="dk-val" id="dash-top-cat-name">—</div>
         <div class="dk-label">Mayor categoría</div>
         <div class="dk-sub" id="dash-top-cat-amt">$ 0</div>
       </div>
       <div class="dash-kpi">
-        <div class="dk-icon">📅</div>
+        <div class="dk-icon" style="background:var(--green-light);color:var(--green-dark)"><svg class="ic"><use href="#i-calendar"/></svg></div>
         <div class="dk-val" id="dash-days-left">0</div>
         <div class="dk-label">Días restantes</div>
         <div class="dk-sub" id="dash-daily-avg">Promedio $ 0/día</div>
@@ -620,7 +667,7 @@
 
     <!-- Donut chart + top categories -->
     <div class="dash-section">
-      <div class="dash-section-title">📈 Distribución de gastos</div>
+      <div class="dash-section-title"><svg class="ic" style="color:var(--green-dark)"><use href="#i-donut"/></svg> Distribución de gastos</div>
       <div class="dash-chart-row">
         <div class="dash-donut-wrap">
           <canvas id="dashDonutChart"></canvas>
@@ -637,7 +684,7 @@
 
     <!-- Top 3 categories -->
     <div class="dash-section">
-      <div class="dash-section-title">🏆 Top categorías del mes</div>
+      <div class="dash-section-title"><svg class="ic" style="color:var(--warn-text)"><use href="#i-trophy"/></svg> Top categorías del mes</div>
       <div id="dash-top-cats">
         <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Sin gastos registrados</div>
       </div>
@@ -646,7 +693,7 @@
     <!-- Gastos fijos pendientes -->
     <div class="dash-section" id="dash-fijos-section">
       <div class="dash-section-title">
-        📌 Gastos fijos pendientes
+        <svg class="ic" style="color:var(--red)"><use href="#i-pin"/></svg> Gastos fijos pendientes
         <span class="dst-badge" id="dash-fijos-badge">0 pendientes</span>
       </div>
       <div id="dash-fijos-list">
@@ -657,7 +704,7 @@
     <!-- Tarjetas de crédito este mes -->
     <div class="dash-section" id="dash-cards-section">
       <div class="dash-section-title">
-        💳 Cuotas de tarjeta este mes
+        <svg class="ic" style="color:var(--blue-btn)"><use href="#i-card"/></svg> Cuotas de tarjeta este mes
         <span class="dst-badge" id="dash-cards-badge" style="background:var(--blue-light);color:var(--blue)">$ 0</span>
       </div>
       <div id="dash-cards-list">
@@ -675,7 +722,7 @@
       style="width:100%;background:var(--card);border:1.5px solid var(--green);border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:inherit;box-shadow:var(--shadow);transition:all 0.15s"
       onmouseover="this.style.background='var(--green-light)'" onmouseout="this.style.background='var(--card)'">
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:38px;height:38px;background:var(--green-light);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">📌</div>
+        <div style="width:38px;height:38px;background:var(--green-light);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--green-dark)"><svg class="ic"><use href="#i-pin"/></svg></div>
         <div style="text-align:left">
           <div style="font-size:14px;font-weight:600;color:var(--text)">Gastos e Ingresos Fijos</div>
           <div style="font-size:12px;color:var(--text2);margin-top:1px" id="fijos-btn-summary">Toca para gestionar</div>
@@ -701,7 +748,7 @@
           <div class="bi-val" id="totalExpenses">$ 0</div>
         </div>
         <div class="balance-item out" id="balance-tc-pill" style="display:none">
-          <div class="bi-label">💳 TC mín</div>
+          <div class="bi-label"><svg class="ic"><use href="#i-card"/></svg> TC mín</div>
           <div class="bi-val" id="totalTCMin">$ 0</div>
         </div>
       </div>
@@ -715,7 +762,7 @@
 
     <!-- EXPENSE LIST -->
     <div id="expenseList">
-      <div class="empty"><div class="empty-icon">📋</div><p>No hay gastos este mes.<br>Toca el botón + para agregar uno.</p></div>
+      <div class="empty"><div class="empty-icon" style="color:var(--text3)"><svg class="ic" style="stroke-width:1.5"><use href="#i-clipboard"/></svg></div><p>No hay gastos este mes.<br>Toca el botón + para agregar uno.</p></div>
     </div>
 
     <!-- INCOME REGISTER -->
@@ -727,7 +774,7 @@
       <div class="section-total" id="incomeCount">0 ingresos</div>
     </div>
     <div id="incomeList">
-      <div class="empty"><div class="empty-icon">💚</div><p>Sin ingresos este mes.<br>Toca el botón + Ingreso para registrar.</p></div>
+      <div class="empty"><div class="empty-icon" style="color:var(--text3)"><svg class="ic" style="stroke-width:1.5"><use href="#i-heart"/></svg></div><p>Sin ingresos este mes.<br>Toca el botón + Ingreso para registrar.</p></div>
     </div>
 
   </div>
@@ -738,14 +785,14 @@
       <div class="modal-handle"></div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div class="modal-title" style="margin:0">📌 Gastos e Ingresos Fijos</div>
+        <div class="modal-title" style="margin:0;display:flex;align-items:center;gap:8px"><svg class="ic" style="color:var(--green-dark)"><use href="#i-pin"/></svg> Gastos e Ingresos Fijos</div>
         <button onclick="closeModal('fijosModal')" class="modal-x">✕</button>
       </div>
 
       <!-- Resumen KPIs -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div style="background:var(--red-light);border-radius:var(--radius-sm);padding:14px;border-left:3px solid var(--red)">
-          <div style="font-size:11px;color:var(--text2);font-weight:500">📌 Gastos fijos</div>
+          <div style="font-size:11px;color:var(--text2);font-weight:500"><svg class="ic"><use href="#i-pin"/></svg> Gastos fijos</div>
           <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red);margin-top:4px" id="fijos-gastos-total">$ 0</div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px">
             <span style="color:var(--green-dark);font-weight:600" id="fijos-gastos-pagado">$ 0</span> pagado ·
@@ -753,7 +800,7 @@
           </div>
         </div>
         <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:14px;border-left:3px solid var(--green)">
-          <div style="font-size:11px;color:var(--text2);font-weight:500">💰 Ingresos fijos</div>
+          <div style="font-size:11px;color:var(--text2);font-weight:500"><svg class="ic"><use href="#i-wallet"/></svg> Ingresos fijos</div>
           <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green-dark);margin-top:4px" id="fijos-ingresos-total">$ 0</div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px">
             <span style="color:var(--green-dark);font-weight:600" id="fijos-ingresos-pagado">$ 0</span> recibido ·
@@ -800,7 +847,7 @@
   <div class="modal-overlay" id="varAmtModal">
     <div class="modal" style="max-width:320px">
       <div class="modal-handle"></div>
-      <div class="modal-title" id="varAmtTitle">📊 Gasto variable</div>
+      <div class="modal-title" id="varAmtTitle">Gasto variable</div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:14px" id="varAmtSub"></div>
       <div class="field">
         <label>¿Cuánto pagaste este mes?</label>
@@ -845,11 +892,11 @@
         <div style="display:flex;gap:8px;margin-top:4px">
           <button id="fijo-tipo-fijo" onclick="setFijoTipo('fijo')"
             style="flex:1;padding:10px;border-radius:var(--radius-sm);border:2px solid var(--green);background:var(--green-light);color:var(--green-dark);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
-            📌 Valor fijo
+            <svg class="ic"><use href="#i-pin"/></svg> Valor fijo
           </button>
           <button id="fijo-tipo-variable" onclick="setFijoTipo('variable')"
             style="flex:1;padding:10px;border-radius:var(--radius-sm);border:2px solid var(--border);background:var(--bg);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
-            📊 Valor variable
+            <svg class="ic"><use href="#i-bars"/></svg> Valor variable
           </button>
         </div>
         <div id="fijo-tipo-hint" style="font-size:11px;color:var(--text3);margin-top:6px">
@@ -883,13 +930,13 @@
     <div class="section-header" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <div class="section-title">Mis tarjetas</div>
       <div style="display:flex;gap:8px;position:relative" id="tcardActions">
-        <button class="tcard-btn-primary" onclick="document.getElementById('extractoFileInput').click()">📂 Importar extracto</button>
-        <button class="tcard-btn-secondary tcard-collapsible" onclick="openTCRegistroModal()">📝 Mis compras</button>
-        <button class="tcard-btn-secondary tcard-collapsible" onclick="openCardChartModal()">📊 Gráficas</button>
+        <button class="tcard-btn-primary" onclick="document.getElementById('extractoFileInput').click()"><svg class="ic"><use href="#i-upload"/></svg> Importar extracto</button>
+        <button class="tcard-btn-secondary tcard-collapsible" onclick="openTCRegistroModal()"><svg class="ic"><use href="#i-file"/></svg> Mis compras</button>
+        <button class="tcard-btn-secondary tcard-collapsible" onclick="openCardChartModal()"><svg class="ic"><use href="#i-bars"/></svg> Gráficas</button>
         <button class="tcard-btn-secondary tcard-more" id="tcardMoreBtn" onclick="toggleTCardMenu(event)" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">⋯</button>
         <div class="tcard-menu hidden" id="tcardMenu">
-          <button onclick="closeTCardMenu();openTCRegistroModal()">📝 Mis compras</button>
-          <button onclick="closeTCardMenu();openCardChartModal()">📊 Gráficas</button>
+          <button onclick="closeTCardMenu();openTCRegistroModal()"><svg class="ic"><use href="#i-file"/></svg> Mis compras</button>
+          <button onclick="closeTCardMenu();openCardChartModal()"><svg class="ic"><use href="#i-bars"/></svg> Gráficas</button>
         </div>
       </div>
     </div>
@@ -903,7 +950,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
       <div style="background:var(--card);border-radius:var(--radius-sm);padding:14px;text-align:center;box-shadow:var(--shadow);border-top:2px solid var(--blue)">
         <div style="font-size:17px;font-weight:600;font-family:'DM Mono',monospace;color:var(--blue)" id="tc-total-deuda">$ 0</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:3px">💳 Pago mínimo mes</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px"><svg class="ic"><use href="#i-card"/></svg> Pago mínimo mes</div>
       </div>
       <div style="background:var(--card);border-radius:var(--radius-sm);padding:14px;text-align:center;box-shadow:var(--shadow)">
         <div style="font-size:17px;font-weight:600;font-family:'DM Mono',monospace;color:var(--red)" id="tc-total-mes">$ 0</div>
@@ -918,7 +965,7 @@
     <!-- Buscador y ordenamiento -->
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <div style="flex:1;position:relative">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none">🔍</span>
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;display:flex"><svg class="ic"><use href="#i-search"/></svg></span>
         <input type="text" id="cardSearchInput" placeholder="Buscar compra..." oninput="renderCards()"
           style="width:100%;padding:9px 12px 9px 34px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg);box-sizing:border-box">
       </div>
@@ -937,7 +984,7 @@
     </div>
 
     <div id="cardPurchaseList">
-      <div class="empty"><div class="empty-icon">💳</div><p>No hay compras para este mes.</p></div>
+      <div class="empty"><div class="empty-icon" style="color:var(--text3)"><svg class="ic" style="stroke-width:1.5"><use href="#i-card"/></svg></div><p>No hay compras para este mes.</p></div>
     </div>
   </div>
 
@@ -948,7 +995,7 @@
     <!-- Apariencia -->
     <div style="background:var(--card);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="font-size:20px">🎨</div>
+        <div style="font-size:18px;color:var(--text2);display:flex"><svg class="ic"><use href="#i-palette"/></svg></div>
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)">Apariencia</div>
           <div style="font-size:11px;color:var(--text2)">Cambia entre modo claro y oscuro</div>
@@ -956,17 +1003,17 @@
       </div>
       <button id="dark-mode-btn" onclick="toggleDarkMode()"
         style="background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text)">
-        🌙 Modo oscuro
+        <svg class="ic"><use href="#i-moon"/></svg> Modo oscuro
       </button>
     </div>
 
     <!-- Usuario activo -->
     <div style="background:var(--card);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)">
       <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:36px;height:36px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--green-dark)"><svg class="ic"><use href="#i-user"/></svg></div>
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)" id="user-email-display">No conectado</div>
-          <div style="font-size:11px;color:var(--green-dark)">🔥 Firebase activo</div>
+          <div style="font-size:11px;color:var(--green-dark)"><svg class="ic"><use href="#i-cloud"/></svg> Firebase activo</div>
         </div>
       </div>
       <button onclick="logoutUser()" style="background:var(--red-light);color:var(--red);border:1px solid var(--red);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Cerrar sesión</button>
@@ -975,16 +1022,16 @@
     <!-- 🏷️ CATEGORÍAS (moved here from tab) -->
     <div class="card-item" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="card-name">🏷️ Mis categorías</div>
+        <div class="card-name" style="display:flex;align-items:center;gap:8px"><svg class="ic" style="color:var(--green-dark)"><use href="#i-tag"/></svg> Mis categorías</div>
         <button onclick="openCatModal()" class="chip-btn green">+ Nueva</button>
       </div>
       <div style="background:var(--yellow-light);border:1px solid var(--warn-border);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--warn-text);">
-        💡 Las categorías con gastos registrados no se pueden eliminar hasta borrar esos gastos.
+        Las categorías con gastos registrados no se pueden eliminar hasta borrar esos gastos.
       </div>
       <div class="cat-manage-grid" id="catManageGrid"></div>
     </div>
     <details class="config-acc">
-      <summary>🔥 Configurar Firebase <span class="acc-hint">avanzado</span><span class="acc-chevron">▼</span></summary>
+      <summary><svg class="ic" style="color:var(--text2)"><use href="#i-flame"/></svg> Configurar Firebase <span class="acc-hint">avanzado</span><span class="acc-chevron">▼</span></summary>
       <div class="acc-body">
         <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">Para sincronizar con la app de Android, ingresa las credenciales de tu proyecto Firebase. Crea uno gratis en <a href="https://console.firebase.google.com" target="_blank" style="color:var(--green)">console.firebase.google.com</a></p>
         <div class="field"><label>API Key</label><input type="text" id="fb-apiKey" placeholder="AIzaSy..." value=""></div>
@@ -992,23 +1039,23 @@
         <div class="field"><label>Project ID</label><input type="text" id="fb-projectId" placeholder="miproyecto-xxxxx"></div>
         <div class="field"><label>App ID</label><input type="text" id="fb-appId" placeholder="1:123456789:web:abc..."></div>
         <button class="btn btn-green" onclick="saveFirebaseConfig()">Guardar y conectar</button>
-        <button class="btn btn-outline" onclick="fsPushAll()" style="margin-top:6px">☁️ Sincronizar datos ahora</button>
+        <button class="btn btn-outline" onclick="fsPushAll()" style="margin-top:6px"><svg class="ic"><use href="#i-cloud"/></svg> Sincronizar datos ahora</button>
         <div id="fb-status" style="text-align:center;font-size:13px;margin-top:10px;color:var(--text2)"></div>
       </div>
     </details>
     <details class="config-acc">
-      <summary>📊 Datos del mes <span class="acc-hint">exportar · limpiar</span><span class="acc-chevron">▼</span></summary>
+      <summary><svg class="ic" style="color:var(--text2)"><use href="#i-download"/></svg> Datos del mes <span class="acc-hint">exportar · limpiar</span><span class="acc-chevron">▼</span></summary>
       <div class="acc-body">
         <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Exportar o limpiar datos del mes actual</p>
-        <button class="btn btn-outline" onclick="exportData()">📥 Exportar CSV</button>
-        <button class="btn btn-outline" style="color:var(--red);border-color:var(--red);margin-top:8px" onclick="clearMonth()">🗑️ Limpiar mes actual</button>
+        <button class="btn btn-outline" onclick="exportData()"><svg class="ic"><use href="#i-download"/></svg> Exportar CSV</button>
+        <button class="btn btn-outline" style="color:var(--red);border-color:var(--red);margin-top:8px" onclick="clearMonth()"><svg class="ic"><use href="#i-trash"/></svg> Limpiar mes actual</button>
       </div>
     </details>
     <details class="config-acc danger">
-      <summary>⚠️ Zona de peligro<span class="acc-chevron">▼</span></summary>
+      <summary><svg class="ic"><use href="#i-alert"/></svg> Zona de peligro<span class="acc-chevron">▼</span></summary>
       <div class="acc-body">
         <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">Elimina <strong>absolutamente todos</strong> los datos de la app: gastos, ingresos, tarjetas, compras, fijos y categorías personalizadas. Útil mientras configuras la app.</p>
-        <button class="btn" style="background:var(--red-dark);color:white" onclick="clearAllData()">🗑️ Borrar todo y empezar de cero</button>
+        <button class="btn" style="background:var(--red-dark);color:white" onclick="clearAllData()"><svg class="ic"><use href="#i-trash"/></svg> Borrar todo y empezar de cero</button>
       </div>
     </details>
   </div>
@@ -1034,11 +1081,11 @@
       <div style="display:flex;gap:8px">
         <button id="pt-cash" type="button" onclick="EM.setMethod('cash')"
           style="flex:1;padding:9px 8px;border-radius:var(--radius-sm);border:2px solid var(--green);background:var(--green-light);color:var(--green-dark);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
-          💵 Efectivo / Débito
+          <svg class="ic"><use href="#i-banknote"/></svg> Efectivo / Débito
         </button>
         <button id="pt-card" type="button" onclick="EM.setMethod('card')"
           style="flex:1;padding:9px 8px;border-radius:var(--radius-sm);border:2px solid var(--border);background:var(--bg);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">
-          💳 Tarjeta de crédito
+          <svg class="ic"><use href="#i-card"/></svg> Tarjeta de crédito
         </button>
       </div>
     </div>
@@ -1063,7 +1110,7 @@
           <label style="font-size:11px;color:var(--text2);font-weight:500;display:block;margin-bottom:4px">Fecha</label>
           <input type="date" id="entryDate" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg)">
         </div>
-        <button id="entrySaveBtn" type="button" onclick="EM.save()" style="width:100%;padding:12px;border:none;border-radius:var(--radius-sm);background:var(--green-btn);color:white;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px">💚 Guardar ingreso</button>
+        <button id="entrySaveBtn" type="button" onclick="EM.save()" style="width:100%;padding:12px;border:none;border-radius:var(--radius-sm);background:var(--green-btn);color:white;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:6px">Guardar ingreso</button>
         <button type="button" onclick="EM.close()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text2);font-size:14px;cursor:pointer;font-family:inherit">Cancelar</button>
       </div>
 
@@ -1107,17 +1154,17 @@
   <div class="modal" style="max-width:860px;max-height:94vh;overflow-y:auto;padding:20px">
     <div class="modal-handle"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div class="modal-title" style="margin:0">📊 Análisis de tarjetas</div>
+      <div class="modal-title" style="margin:0;display:flex;align-items:center;gap:8px"><svg class="ic" style="color:var(--blue-btn)"><use href="#i-bars"/></svg> Análisis de tarjetas</div>
       <button onclick="closeModal('cardChartModal')" class="modal-x">✕ Cerrar</button>
     </div>
 
     <!-- Chart view tabs -->
     <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);overflow-x:auto">
-      <button onclick="showChartTab('desglose')" id="cht-tab-desglose" class="cht-tab active-cht">🍕 Desglose del mes</button>
-      <button onclick="showChartTab('minimos')" id="cht-tab-minimos" class="cht-tab">💳 Pagos mínimos</button>
-      <button onclick="showChartTab('historial')" id="cht-tab-historial" class="cht-tab">📅 Historial</button>
-      <button onclick="showChartTab('compras')" id="cht-tab-compras" class="cht-tab">🏆 Top compras</button>
-      <button onclick="showChartTab('cargos')" id="cht-tab-cargos" class="cht-tab">⚠️ Cargos</button>
+      <button onclick="showChartTab('desglose')" id="cht-tab-desglose" class="cht-tab active-cht"><svg class="ic"><use href="#i-donut"/></svg> Desglose del mes</button>
+      <button onclick="showChartTab('minimos')" id="cht-tab-minimos" class="cht-tab"><svg class="ic"><use href="#i-card"/></svg> Pagos mínimos</button>
+      <button onclick="showChartTab('historial')" id="cht-tab-historial" class="cht-tab"><svg class="ic"><use href="#i-clock"/></svg> Historial</button>
+      <button onclick="showChartTab('compras')" id="cht-tab-compras" class="cht-tab"><svg class="ic"><use href="#i-trophy"/></svg> Top compras</button>
+      <button onclick="showChartTab('cargos')" id="cht-tab-cargos" class="cht-tab"><svg class="ic"><use href="#i-alert"/></svg> Cargos</button>
     </div>
 
     <!-- Desglose del mes: donut por tipo de gasto -->
@@ -1846,7 +1893,7 @@ function renderGastos() {
 
   const list = document.getElementById('expenseList');
   if (!expenses.length && !fijosPagadosList.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><p>No hay gastos este mes.<br>Toca el botón + para agregar uno.</p></div>';
+    list.innerHTML = '<div class="empty"><div class="empty-icon" style="color:var(--text3)"><svg class="ic" style="stroke-width:1.5"><use href="#i-clipboard"/></svg></div><p>No hay gastos este mes.<br>Toca el botón + para agregar uno.</p></div>';
     return;
   }
 
@@ -1876,17 +1923,17 @@ function renderGastos() {
             ? `${fmtCOP(e.amount)} <span style="font-size:11px;color:var(--text3);text-decoration:line-through">${fmtCOP(e.originalAmount)}</span>`
             : fmtCOP(e.amount);
           return `<div class="expense-item" style="opacity:0.82">
-            <span class="expense-note">${e.note}${e.fijoNote ? ' <em style="color:var(--text3);font-size:11px">· ${e.fijoNote}</em>' : ''} <span style="font-size:11px;background:var(--yellow-light);color:var(--warn-text);padding:1px 5px;border-radius:8px;font-weight:600">📌</span></span>
+            <span class="expense-note">${e.note}${e.fijoNote ? ' <em style="color:var(--text3);font-size:11px">· ${e.fijoNote}</em>' : ''} <span style="font-size:11px;background:var(--yellow-light);color:var(--warn-text);padding:1px 5px;border-radius:8px;font-weight:600"><svg class="ic"><use href="#i-pin"/></svg></span></span>
             <span class="expense-date">día ${e.fijoDay}</span>
             <span class="expense-amt">${amtHtml}</span>
-            <button class="expense-del" title="Ir a Fijos" onclick="openFijosModal()" style="font-size:11px;opacity:0.45;padding:4px 7px">📌</button>
+            <button class="expense-del" title="Ir a Fijos" onclick="openFijosModal()" style="font-size:12px;opacity:0.45;padding:4px 7px"><svg class="ic"><use href="#i-pin"/></svg></button>
           </div>`;
         }
         return `<div class="expense-item">
           <span class="expense-note">${e.note || '—'}</span>
           <span class="expense-date">${formatDate(e.date)}</span>
           <span class="expense-amt">${fmtCOP(e.amount)}</span>
-          <button class="expense-edit" onclick="EM.openEdit('${e.id}')" title="Editar" style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:13px;color:var(--text3);opacity:0.7">✏️</button>
+          <button class="expense-edit" onclick="EM.openEdit('${e.id}')" title="Editar" style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:13px;color:var(--text3)"><svg class="ic"><use href="#i-pencil"/></svg></button>
           <button class="expense-del" onclick="deleteExpense('${e.id}')">✕</button>
         </div>`;
       }).join('');
@@ -1928,7 +1975,7 @@ function renderIncomeList() {
   if (!listEl) return;
 
   if (!incomes.length && !fijosPagados.length) {
-    listEl.innerHTML = '<div class="empty"><div class="empty-icon">💚</div><p>Sin ingresos este mes.<br>Toca el botón + Ingreso para registrar.</p></div>';
+    listEl.innerHTML = '<div class="empty"><div class="empty-icon" style="color:var(--text3)"><svg class="ic" style="stroke-width:1.5"><use href="#i-heart"/></svg></div><p>Sin ingresos este mes.<br>Toca el botón + Ingreso para registrar.</p></div>';
     return;
   }
 
@@ -1939,7 +1986,7 @@ function renderIncomeList() {
     const sorted = [...incomes].sort((a, b) => new Date(b.date||0) - new Date(a.date||0));
     html += '<div class="category-group">' +
       '<div class="cat-header" onclick="toggleCat(this)">' +
-        '<div class="cat-icon" style="background:var(--green-light)">💰</div>' +
+        '<div class="cat-icon" style="background:var(--green-light);color:var(--green-dark)"><svg class="ic"><use href="#i-wallet"/></svg></div>' +
         '<div class="cat-info">' +
           '<div class="cat-name">Ingresos registrados</div>' +
           '<div class="cat-count">' + incomes.length + ' entrada' + (incomes.length !== 1 ? 's' : '') + '</div>' +
@@ -1963,7 +2010,7 @@ function renderIncomeList() {
   if (fijosPagados.length) {
     html += '<div class="category-group" style="opacity:0.9;border:1px dashed var(--green)">' +
       '<div class="cat-header" onclick="toggleCat(this)">' +
-        '<div class="cat-icon" style="background:var(--green-light)">📌</div>' +
+        '<div class="cat-icon" style="background:var(--green-light);color:var(--green-dark)"><svg class="ic"><use href="#i-pin"/></svg></div>' +
         '<div class="cat-info">' +
           '<div class="cat-name">Ingresos fijos recibidos</div>' +
           '<div class="cat-count" style="color:var(--green-dark)">Solo informativo · ' + fijosPagados.length + ' fijo' + (fijosPagados.length > 1 ? 's' : '') + '</div>' +
@@ -1975,11 +2022,11 @@ function renderIncomeList() {
       fijosPagados.map(f =>
         '<div class="expense-item" style="opacity:0.8">' +
           '<span class="expense-note" style="display:flex;align-items:center;gap:6px">' +
-            '<span>💰</span>' + f.name + (f.deleted ? ' <span style="font-size:11px;color:var(--text3)">(eliminado)</span>' : '') + (f.note ? ' · <em style="color:var(--text3)">' + f.note + '</em>' : '') +
+            f.name + (f.deleted ? ' <span style="font-size:11px;color:var(--text3)">(eliminado)</span>' : '') + (f.note ? ' · <em style="color:var(--text3)">' + f.note + '</em>' : '') +
           '</span>' +
           '<span class="expense-date">día ' + f.day + '</span>' +
           '<span class="expense-amt" style="color:var(--green-dark)">+ ' + fmtCOP(f.amount) + '</span>' +
-          '<button class="expense-del" title="Gestionar en Fijos" onclick="openFijosModal()" style="font-size:12px;opacity:0.5">📌</button>' +
+          '<button class="expense-del" title="Gestionar en Fijos" onclick="openFijosModal()" style="font-size:12px;opacity:0.5"><svg class="ic"><use href="#i-pin"/></svg></button>' +
         '</div>'
       ).join('') +
       '</div></div>';
@@ -2084,7 +2131,7 @@ const EM = {
     this.selectCat(expense.category || CATEGORIES[0]?.id || 'otro');
     // Mark save button as edit
     const btn = document.getElementById('entrySaveBtn');
-    btn.textContent = '✏️ Guardar cambios';
+    btn.textContent = 'Guardar cambios';
     btn.style.background = 'var(--blue-btn)';
   },
 
@@ -2122,7 +2169,7 @@ const EM = {
     document.getElementById('entryCatSection').style.display    = isInc ? 'none' : '';
     document.getElementById('entryPaymentSection').style.display = isInc ? 'none' : '';
     document.getElementById('entrySaveBtn').style.background = isInc ? 'var(--green-btn)' : 'var(--red-dark)';
-    document.getElementById('entrySaveBtn').textContent = isInc ? '💚 Guardar ingreso' : '🔴 Guardar gasto';
+    document.getElementById('entrySaveBtn').textContent = isInc ? 'Guardar ingreso' : 'Guardar gasto';
     document.getElementById('entry-note-label').textContent = isInc ? 'Nota (opcional)' : 'Nota (opcional)';
     document.getElementById('entryNote').placeholder = isInc ? 'Ej: Salario, freelance...' : '¿En qué gastaste?';
 
@@ -2616,7 +2663,7 @@ function renderCards() {
   if (!list) return;
 
   if (!active.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">💳</div><p>No hay compras para este mes.<br>Sube el extracto de este mes para verlas aquí.</p></div>';
+    list.innerHTML = '<div class="empty"><div class="empty-icon" style="color:var(--text3)"><svg class="ic" style="stroke-width:1.5"><use href="#i-card"/></svg></div><p>No hay compras para este mes.<br>Sube el extracto de este mes para verlas aquí.</p></div>';
     return;
   }
   if (!toShow.length) {
@@ -3361,7 +3408,7 @@ function toggleFijoPaid(id, type) {
       if (!fijo) return; // huérfano: no se puede re-marcar sin definición
       if (fijo.variable) {
         // Show nice modal instead of prompt()
-        document.getElementById('varAmtTitle').textContent = '📊 ' + fijo.name;
+        document.getElementById('varAmtTitle').textContent = fijo.name;
         document.getElementById('varAmtSub').textContent   = 'Estimado: ' + fmtCOP(fijo.amount);
         const inp = document.getElementById('varAmtInput');
         inp.value = fijo.amount;
@@ -3497,7 +3544,7 @@ function orphanFijoHTML(e, type) {
   return '<div class="fijo-item paid">' +
     '<button class="fijo-check checked" style="background:var(--green);border-color:var(--green)"' +
     ' onclick="toggleFijoPaid(\'' + e.id + '\',\'' + type + '\')" title="Quitar de este mes (no se puede volver a marcar)">✓</button>' +
-    '<div class="fijo-icon" style="background:var(--bg)">' + (isIngreso ? '💰' : '📌') + '</div>' +
+    '<div class="fijo-icon" style="background:var(--bg);color:var(--text3)"><svg class="ic"><use href="#i-' + (isIngreso ? 'wallet' : 'pin') + '"/></svg></div>' +
     '<div class="fijo-info">' +
       '<div class="fijo-name paid-text">' + e.name + ' <span style="font-size:11px;background:var(--bg);color:var(--text3);padding:1px 7px;border-radius:10px">eliminado</span></div>' +
       '<div class="fijo-meta">Día ' + e.day + (e.note ? ' · ' + e.note : '') + '</div>' +
@@ -3529,7 +3576,7 @@ function fijoItemHTML(f, isPaid, cat, color, overdue, type, paidObj) {
     ? '<span style="background:var(--red-light);color:var(--red);font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;margin-left:4px">Vencido</span>'
     : '';
   const varBadge    = isVariable
-    ? '<span style="font-size:11px;background:var(--yellow-light);color:var(--warn-text);padding:1px 7px;border-radius:10px;margin-left:4px">📊 Variable</span>'
+    ? '<span style="font-size:11px;background:var(--yellow-light);color:var(--warn-text);padding:1px 7px;border-radius:10px;margin-left:4px"><svg class="ic"><use href="#i-bars"/></svg> Variable</span>'
     : '';
   // Show actual paid amount vs estimate
   const amtDisplay  = isPaid && isVariable && actualAmt !== f.amount
@@ -3549,7 +3596,7 @@ function fijoItemHTML(f, isPaid, cat, color, overdue, type, paidObj) {
     '<div class="fijo-right">' +
       '<div class="fijo-amt ' + (isPaid ? 'paid-text' : '') + '" style="' + amtColor + '">' + amtDisplay + '</div>' +
       '<div style="display:flex;gap:0">' +
-        '<button class="fijo-del" onclick="openFijoEditModal(\'' + f.id + '\',\'' + type + '\')" title="Editar">✏️</button>' +
+        '<button class="fijo-del" onclick="openFijoEditModal(\'' + f.id + '\',\'' + type + '\')" title="Editar"><svg class="ic"><use href="#i-pencil"/></svg></button>' +
         '<button class="fijo-del" onclick="deleteFijo(\'' + f.id + '\',\'' + type + '\')" title="Eliminar">✕</button>' +
       '</div>' +
     '</div>' +
@@ -3655,7 +3702,7 @@ async function initFirestoreSync(cfg, app, user) {
     await fsPullAll();
 
     const bar = document.getElementById('firebaseBar');
-    bar.innerHTML = '🔥 Sincronizando datos en la nube.';
+    bar.innerHTML = '<svg class="ic"><use href="#i-cloud"/></svg> Sincronizado en la nube';
     bar.style.background  = 'var(--green-light)';
     bar.style.borderColor = 'var(--green)';
     bar.style.color       = 'var(--green-dark)';
@@ -3684,7 +3731,7 @@ function updateDarkModeBtn() {
   const btn = document.getElementById('dark-mode-btn');
   if (!btn) return;
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  btn.textContent = isDark ? '☀️ Modo claro' : '🌙 Modo oscuro';
+  btn.innerHTML = isDark ? '<svg class="ic"><use href="#i-sun"/></svg> Modo claro' : '<svg class="ic"><use href="#i-moon"/></svg> Modo oscuro';
 }
 
 function _applyChartTheme() {
@@ -3910,6 +3957,16 @@ function _getToastEl() {
   return t;
 }
 
+// ── Chip "Modo local": descartable, recuerda la preferencia ──
+function dismissLocalBar() {
+  document.getElementById('firebaseBar').classList.remove('show');
+  setStorage('hide-local-bar', true);
+}
+if (getStorage('hide-local-bar')) {
+  const _fb = document.getElementById('firebaseBar');
+  if (_fb) _fb.classList.remove('show');
+}
+
 // ── Menú "⋯" de la cabecera de Tarjetas (variante móvil) ──
 function toggleTCardMenu(e) {
   e.stopPropagation();
@@ -4058,7 +4115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </button>
         <button onclick="importShowTab('cargos')" id="imp-tab-cargos"
           style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;cursor:pointer;font-family:inherit">
-          ⚙️ Cargos (<span id="imp-count-cargos">0</span>)
+          <svg class="ic"><use href="#i-alert"/></svg> Cargos (<span id="imp-count-cargos">0</span>)
         </button>
         <button onclick="importShowTab('anteriores')" id="imp-tab-anteriores"
           style="padding:9px 18px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;cursor:pointer;font-family:inherit">
@@ -4113,7 +4170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-shrink:0">
       <div>
-        <div class="modal-title" style="margin:0">📝 Mis compras con tarjeta</div>
+        <div class="modal-title" style="margin:0;display:flex;align-items:center;gap:8px"><svg class="ic" style="color:var(--green-dark)"><use href="#i-file"/></svg> Mis compras con tarjeta</div>
         <div style="font-size:12px;color:var(--text3);margin-top:2px">Registro informativo · edita directamente en la tabla · no afecta ningún balance</div>
       </div>
       <button onclick="closeModal('tcRegistroModal')" class="modal-x">✕</button>
@@ -4122,7 +4179,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Buscador + mes + botones -->
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;flex-shrink:0">
       <div style="flex:1;min-width:160px;position:relative">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none">🔍</span>
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;display:flex"><svg class="ic"><use href="#i-search"/></svg></span>
         <input type="text" id="tcr-search" placeholder="Buscar en tabla..." oninput="renderTCRegistro()"
           style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--bg);box-sizing:border-box">
       </div>
@@ -4131,7 +4188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <option value="">📅 Todos los meses</option>
       </select>
       <button onclick="tcrAddRow()" class="chip-btn green">+ Nueva fila</button>
-      <button onclick="openEntryModal(false);setTimeout(function(){EM.setMethod('card')},50)" class="chip-btn blue">💳 Registrar gasto</button>
+      <button onclick="openEntryModal(false);setTimeout(function(){EM.setMethod('card')},50)" class="chip-btn blue"><svg class="ic"><use href="#i-card"/></svg> Registrar gasto</button>
     </div>
 
     <!-- KPIs -->
