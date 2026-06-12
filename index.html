@@ -1044,11 +1044,17 @@
       </div>
     </details>
     <details class="config-acc">
-      <summary><svg class="ic" style="color:var(--text2)"><use href="#i-download"/></svg> Datos del mes <span class="acc-hint">exportar · limpiar</span><span class="acc-chevron">▼</span></summary>
+      <summary><svg class="ic" style="color:var(--text2)"><use href="#i-download"/></svg> Datos y respaldo <span class="acc-hint">exportar · importar · limpiar</span><span class="acc-chevron">▼</span></summary>
       <div class="acc-body">
-        <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Exportar o limpiar datos del mes actual</p>
-        <button class="btn btn-outline" onclick="exportData()"><svg class="ic"><use href="#i-download"/></svg> Exportar CSV</button>
-        <button class="btn btn-outline" style="color:var(--red);border-color:var(--red);margin-top:8px" onclick="clearMonth()"><svg class="ic"><use href="#i-trash"/></svg> Limpiar mes actual</button>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Exporta los movimientos del mes actual (gastos, ingresos y fijos pagados) para abrirlos en Excel.</p>
+        <button class="btn btn-outline" onclick="exportData()"><svg class="ic"><use href="#i-download"/></svg> Exportar CSV del mes</button>
+        <div style="border-top:1px solid var(--border);margin:16px 0 12px"></div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5">Respaldo completo: guarda o restaura <strong>todos</strong> tus datos (todos los meses, fijos, tarjetas y categorías) en un archivo. Útil para cambiar de dispositivo o como copia de seguridad.</p>
+        <button class="btn btn-outline" onclick="exportBackup()"><svg class="ic"><use href="#i-download"/></svg> Descargar respaldo (.json)</button>
+        <button class="btn btn-outline" style="margin-top:8px" onclick="document.getElementById('backupFileInput').click()"><svg class="ic"><use href="#i-upload"/></svg> Importar respaldo</button>
+        <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none" onchange="handleBackupFile(this)">
+        <div style="border-top:1px solid var(--border);margin:16px 0 12px"></div>
+        <button class="btn btn-outline" style="color:var(--red);border-color:var(--red)" onclick="clearMonth()"><svg class="ic"><use href="#i-trash"/></svg> Limpiar mes actual</button>
       </div>
     </details>
     <details class="config-acc danger">
@@ -3893,16 +3899,86 @@ function fsPushAll() {
 // ============================================================
 function exportData() {
   const expenses = getExpenses();
-  if (!expenses.length) { showToast('No hay datos para exportar este mes'); return; }
-  const rows = [['Fecha','Categoría','Nota','Monto COP']].concat(
-    expenses.map(e => [e.date, e.category, e.note||'', e.amount])
-  );
-  const csv = rows.map(r => r.join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
+  const incomes  = getIncomeList();
+  const fijosG   = getPaidFijoEntries(getFijos(), getFijosPaid());
+  const fijosI   = getPaidFijoEntries(getIngresosFijos(), getIngresosPaid());
+  if (!expenses.length && !incomes.length && !fijosG.length && !fijosI.length) {
+    showToast('No hay datos para exportar este mes'); return;
+  }
+  const catName = id => (CATEGORIES.find(c => c.id === id) || { name: id }).name;
+  // Escape CSV: comillas dobles si el valor contiene separador, comillas o saltos de línea
+  const esc = v => { v = String(v == null ? '' : v); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const fijoDate = day => `${monthKey()}-${String(day || 1).padStart(2, '0')}`;
+  const rows = [['Tipo','Fecha','Categoría','Nota','Monto COP']];
+  expenses.forEach(e => rows.push(['Gasto',        e.date,           catName(e.category), e.note || '', e.amount]));
+  fijosG.forEach(f =>   rows.push(['Gasto fijo',   fijoDate(f.day),  catName(f.category), f.name + (f.note ? ' - ' + f.note : ''), f.amount]));
+  incomes.forEach(i =>  rows.push(['Ingreso',      i.date || '',     '',                  i.note || '', i.amount]));
+  fijosI.forEach(f =>   rows.push(['Ingreso fijo', fijoDate(f.day),  '',                  f.name + (f.note ? ' - ' + f.note : ''), f.amount]));
+  // BOM (U+FEFF) para que Excel respete las tildes; ";" como separador (estándar en Excel en español)
+  const csv = String.fromCharCode(0xFEFF) + rows.map(r => r.map(esc).join(';')).join('\r\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `finanzas-${monthKey()}.csv`;
   a.click();
+  showToast('CSV del mes descargado');
+}
+
+// ── Respaldo completo: todos los meses, fijos, tarjetas y categorías ──
+function exportBackup() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k === 'firebase-config') continue; // nunca incluir credenciales
+    try { data[k] = JSON.parse(localStorage.getItem(k)); }
+    catch { data[k] = localStorage.getItem(k); }
+  }
+  const payload = { app: 'MisFinanzas', version: 1, exported: new Date().toISOString(), data };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `misfinanzas-respaldo-${new Date().toISOString().substring(0,10)}.json`;
+  a.click();
+  showToast('Respaldo completo descargado');
+}
+
+function handleBackupFile(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let parsed;
+    try { parsed = JSON.parse(reader.result); }
+    catch { showToast('⚠️ El archivo no es un respaldo válido'); return; }
+    if (!parsed || parsed.app !== 'MisFinanzas' || !parsed.data) {
+      showToast('⚠️ El archivo no es un respaldo de MisFinanzas'); return;
+    }
+    applyBackup(parsed);
+  };
+  reader.readAsText(file);
+}
+
+function applyBackup(parsed) {
+  const keys = Object.keys(parsed.data).filter(k => k !== 'firebase-config');
+  const fecha = parsed.exported ? parsed.exported.substring(0, 10) : 'fecha desconocida';
+  showConfirm({
+    title: 'Restaurar respaldo',
+    message: `Respaldo del ${fecha} con ${keys.length} registros.\n\nLos datos del respaldo sobrescribirán los actuales donde coincidan.`,
+    confirmText: 'Restaurar',
+    onConfirm: () => {
+      keys.forEach(k => {
+        // 'finanzas-theme' se guarda como string crudo (sin JSON), igual que lo lee initTheme
+        if (k === 'finanzas-theme') localStorage.setItem(k, parsed.data[k]);
+        else setStorage(k, parsed.data[k]);
+      });
+      reloadCategories();
+      rebuildCatColors();
+      initTheme();
+      renderDashboard(); renderGastos(); renderFijos(); renderCards(); renderCategorias();
+      showToast('✅ Respaldo restaurado');
+    }
+  });
 }
 
 function clearMonth() {
